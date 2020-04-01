@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">VentMe</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Bluetooth Fragment</string>
+    <string name="wifi_fragment_label">Wifi Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+
+    <string name="find_vent_bt">Find ventilator via Bluetooth</string>
+    <string name="find_vent_wifi">Find ventilator via Wifi</string>
+    <string name="to_plots">Back to plots</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+</resources>
