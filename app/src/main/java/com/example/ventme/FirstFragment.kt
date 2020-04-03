@@ -3,6 +3,7 @@ package com.example.ventme
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,45 +18,67 @@ private const val TAG = "VentPlotting"
 
 class FirstFragment : Fragment() {
 
+    // display settings
     private var currentIndex : Int = 0
-    private final var maxSamples : Int = 40
-    private final var refreshRate : Long = 500 // in milliseconds
+    private var maxSamples : Int = 40
+    private var refreshRate : Long = 500 // in milliseconds
 
     private lateinit var pressure : XYPlot
     private lateinit var airflow : XYPlot
     private lateinit var seriesPressure : FixedSizeEditableXYSeries
     private lateinit var seriesAirflow : FixedSizeEditableXYSeries
+
+    // data settings
+    private var sampleRate: Int = 0
     private var otwoValue : Number? = null
     private var peepValue : Number? = null
     private var brValue : Number? = null
     private var lastDataTime : Date = Calendar.getInstance().time
+    private var packetCount : Long = 0
 
+    fun get_display_string( n : Number? ) : String {
+        if( n == null )
+            return getString(R.string.unknown)
+        return n.toString()
+    }
     /* Display refresh function */
     fun refreshDisplay() {
         val now = Calendar.getInstance().time
         // if no update in last 10 seconds no data
         if( now.time - lastDataTime.time < 10000 ) {
-            if( otwoValue != null ) {
-                activity!!.runOnUiThread(Runnable {
-                    o2num.text = otwoValue.toString()
-                    brnum.text = brValue.toString()
-                    peepnum.text = peepValue.toString()
-                })
-            }
+            activity!!.runOnUiThread(Runnable {
+                if( o2num != null ) {
+                    o2num.text = get_display_string(otwoValue)
+                    brnum.text = get_display_string(brValue)
+                    peepnum.text = get_display_string(peepValue)
+                }
+            })
         }else {
             activity!!.runOnUiThread( Runnable {
-                o2num.text = getString(R.string.unknown)
-                brnum.text = getString(R.string.unknown)
-                peepnum.text = getString(R.string.unknown)
+                if( o2num != null ) {
+                    o2num.text = getString(R.string.unknown)
+                    brnum.text = getString(R.string.unknown)
+                    peepnum.text = getString(R.string.unknown)
+                }
             })
+            resetPlots()
         }
         pressure.redraw()
         airflow.redraw()
     }
 
+    fun resetPlots() {
+        for( i in 1..maxSamples) {
+            seriesPressure.setX(i,i-1)
+            seriesAirflow.setX(i,i-1)
+            seriesPressure.setY(0,i-1)
+            seriesAirflow.setY(0,i-1)
+        }
+    }
     // process incoming data
-    public fun insertSample( pressureSamples : List<Number>, airflowSamples : List<Number>,
-                             localOtwo : Number, localBr : Number, localPeep : Number ) {
+    fun insertSample( localPacketCount : Long, localSampleRate : Int,
+                      pressureSamples : List<Number>, airflowSamples : List<Number>,
+                      localOtwo : Number, localBr : Number, localPeep : Number ) {
         var idx = 0
         for( sample in pressureSamples) {
             seriesPressure.setY(sample,currentIndex)
@@ -73,7 +96,21 @@ class FirstFragment : Fragment() {
         otwoValue =  localOtwo
         peepValue = localPeep
         brValue  =  localBr
+        if( sampleRate != localSampleRate || localPacketCount != packetCount + 1) {
+            // triggers cleanup if there is a loss of packets or
+            // change in sample rate
+            otwoValue =  null
+            peepValue = null
+            brValue  =  null
+            resetPlots()
+            //Log.w(TAG, "---> I am here 2 <----" + lastDataTime.toString() )
+            //Log.w(TAG, "---> I am here 3 <----" + localPacketCount.toString() )
+            //Log.w(TAG, "---> I am here 4 <----" + packateCount.toString() )
+        }
+        packetCount = localPacketCount
+        sampleRate = localSampleRate
         lastDataTime = Calendar.getInstance().time
+        // Log.w(TAG, "---> I am here <----" + lastDataTime.toString() )
     }
 
 
@@ -91,7 +128,7 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        pressure = view.findViewById<XYPlot>(R.id.pressure);
+        pressure = view.findViewById<XYPlot>(R.id.pressure)
         pressure.setDomainStep(StepMode.SUBDIVIDE, 1.0)
         pressure.setRangeStep(StepMode.SUBDIVIDE, 2.0)
         pressure.legend.isVisible = false
@@ -101,7 +138,7 @@ class FirstFragment : Fragment() {
 
         seriesPressure = FixedSizeEditableXYSeries(null,maxSamples)
         pressure.addSeries(seriesPressure, seriesFormat)
-        airflow = view.findViewById<XYPlot>(R.id.airflow);
+        airflow = view.findViewById<XYPlot>(R.id.airflow)
         airflow.setDomainStep(StepMode.SUBDIVIDE, 1.0)
         airflow.setRangeStep(StepMode.SUBDIVIDE, 2.0)
         airflow.legend.isVisible = false

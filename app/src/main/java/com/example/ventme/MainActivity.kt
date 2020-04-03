@@ -47,18 +47,23 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    var packetCounter : Long = 0
+    //todo develop a good data interface
     private fun insertSamples( pressureSamples : List<Number>, airflowSamples : List<Number> ) {
         val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
-            val currentFragment = navHostFragment!!.childFragmentManager.fragments[0]
+            val currentFragment = navHostFragment.childFragmentManager.fragments[0]
             if( currentFragment is FirstFragment ) {
-                val plotFrag = currentFragment as FirstFragment
-                plotFrag.insertSample(pressureSamples,airflowSamples,
+                //val plotFrag = currentFragment as FirstFragment
+                currentFragment.insertSample(
+                    packetCounter, 400,
+                    pressureSamples,airflowSamples,
                     (0..100).random(),
                     (0..100).random(),
                     (0..100).random() )
             }
+            packetCounter += 1
         }
     }
 
@@ -66,10 +71,9 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
-            val currentFragment = navHostFragment!!.childFragmentManager.fragments[0]
+            val currentFragment = navHostFragment.childFragmentManager.fragments[0]
             if( currentFragment is SecondFragment ) {
-                val btFrag = currentFragment as SecondFragment
-                btFrag.foundDevice(device)
+                currentFragment.foundDevice(device)
             }
         }
         //val currentFragment = navHostFragment!!.childFragmentManager.fragments[0] as SecondFragment
@@ -95,18 +99,18 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(bluetoothReceiver, filter)
             if (!bluetoothAdapter.isEnabled) {
                 Log.d(TAG, "Bluetooth is currently disabled...enabling")
-                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff)) );
+                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff)) )
                 bluetoothAdapter.enable()
             } else {
                 Log.d(TAG, "Bluetooth enabled...starting services")
                 //fab.setBackgroundTintList(0xFF00FF00)
-                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorDisconnected)) );
+                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorDisconnected)) )
                 //fab.setBackgroundColor(0xFF00FF00)
             }
         }
 
         fab.setOnClickListener { view ->
-                var status = "No ventilator connected!"
+                var status : String
                 if( bluetoothAdapter == null ) {
                     status = "No Bluetooth in the system"
                 }else if( bluetoothAdapter.isEnabled ) {
@@ -158,11 +162,11 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             when(intent.action) {
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorSearching)) );
+                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorSearching)) )
                     Log.d(TAG, "Bluetooth discovery started")
                 }
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected)) );
+                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected)) )
                     Log.d(TAG, "Bluetooth discovery stopped")
                 }
                 BluetoothDevice.ACTION_FOUND -> {
