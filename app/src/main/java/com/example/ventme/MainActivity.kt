@@ -17,7 +17,6 @@ import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.snackbar.Snackbar
@@ -72,11 +71,11 @@ class MainActivity : AppCompatActivity() {
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
             val currentFragment = navHostFragment.childFragmentManager.fragments[0]
-            if( currentFragment is SecondFragment ) {
+            if( currentFragment is BluetoothFragment ) {
                 currentFragment.foundDevice(device)
             }
         }
-        //val currentFragment = navHostFragment!!.childFragmentManager.fragments[0] as SecondFragment
+        //val currentFragment = navHostFragment!!.childFragmentManager.fragments[0] as BluetoothFragment
         //currentFragment.foundDevice(device)
     }
 
@@ -146,8 +145,8 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_find_vent_bt -> {
-                //Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_DisplayFragment_to_SecondFragment)
-                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_to_SecondFragment)
+                //Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_DisplayFragment_to_BluetoothFragment)
+                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_to_BluetoothFragment)
                 true
             }
             R.id.action_find_vent_wifi -> {

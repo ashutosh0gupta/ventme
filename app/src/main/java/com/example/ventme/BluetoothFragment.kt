@@ -28,10 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 private const val TAG="VentMeBluetooth search"
 
-/**
- * A simple [Fragment] subclass as the second destination in the navigation.
- */
-class SecondFragment : Fragment() {
+class BluetoothFragment : Fragment() {
 
     //private lateinit var bluetoothManager: BluetoothManager
 
@@ -94,7 +91,7 @@ class SecondFragment : Fragment() {
         }
 
         view.findViewById<Button>(R.id.button_second).setOnClickListener {
-            findNavController().navigate(R.id.action_SecondFragment_to_DisplayFragment)
+            findNavController().navigate(R.id.action_BluetoothFragment_to_DisplayFragment)
         }
     }
 
@@ -141,6 +138,10 @@ class btDeviceAdapter(private val myDataset:  ArrayList<BluetoothDevice>) :
     override fun getItemCount() = myDataset.size
 
     public fun insertDeviceAtBack( d : BluetoothDevice) {
+        for( seenDevice in myDataset ) {
+            if( seenDevice.address == d.address )
+                return
+        }
         val position = myDataset.size
         myDataset.add(position, d)
         this.notifyItemInserted(position)
