@@ -54,8 +54,8 @@ class MainActivity : AppCompatActivity() {
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
             val currentFragment = navHostFragment.childFragmentManager.fragments[0]
-            if( currentFragment is FirstFragment ) {
-                //val plotFrag = currentFragment as FirstFragment
+            if( currentFragment is DisplayFragment ) {
+                //val plotFrag = currentFragment as DisplayFragment
                 currentFragment.insertSample(
                     packetCounter, 400,
                     pressureSamples,airflowSamples,
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_find_vent_bt -> {
-                //Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_FirstFragment_to_SecondFragment)
+                //Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_DisplayFragment_to_SecondFragment)
                 Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_to_SecondFragment)
                 true
             }

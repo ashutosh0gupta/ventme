@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/FirstFragment">
+    app:startDestination="@id/DisplayFragment">
 
     <action
         android:id="@+id/action_to_SecondFragment"
@@ -13,8 +13,8 @@
         app:destination="@id/WifiFragment" />
 
     <fragment
-        android:id="@+id/FirstFragment"
-        android:name="com.example.ventme.FirstFragment"
+        android:id="@+id/DisplayFragment"
+        android:name="com.example.ventme.DisplayFragment"
         android:label="@string/first_fragment_label"
         tools:layout="@layout/fragment_first">
     </fragment>
@@ -25,8 +25,8 @@
         tools:layout="@layout/fragment_second">
 
         <action
-            android:id="@+id/action_SecondFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
+            android:id="@+id/action_SecondFragment_to_DisplayFragment"
+            app:destination="@id/DisplayFragment" />
     </fragment>
     <fragment
         android:id="@+id/WifiFragment"
@@ -35,7 +35,7 @@
         tools:layout="@layout/fragment_wifi">
 
         <action
-            android:id="@+id/action_WifiFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
+            android:id="@+id/action_WifiFragment_to_DisplayFragment"
+            app:destination="@id/DisplayFragment" />
     </fragment>
 </navigation>

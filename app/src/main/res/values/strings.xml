@@ -13,6 +13,8 @@
     <string name="o2">%\nO2</string>
     <string name="br">pm\nRR</string>
     <string name="peep">u\nPEEP</string>
+    <string name="ie">\nI:E</string>
+
     <string name="unknown">--</string>
 
     <string name="find_vent_bt">Find ventilator via Bluetooth</string>

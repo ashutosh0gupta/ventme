@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".FirstFragment">
+    tools:context=".DisplayFragment">
 
     <LinearLayout
         android:id="@+id/infoboxes"
@@ -64,6 +64,23 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:text="@string/peep"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/ienum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="36sp" />
+
+        <TextView
+            android:id="@+id/ieview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/ie"
             android:textSize="14sp" />
 
     </LinearLayout>

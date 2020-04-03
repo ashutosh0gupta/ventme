@@ -16,7 +16,7 @@ import java.util.*
 
 private const val TAG = "VentPlotting"
 
-class FirstFragment : Fragment() {
+class DisplayFragment : Fragment() {
 
     // display settings
     private var currentIndex : Int = 0
