@@ -46,9 +46,6 @@ class SecondFragment : Fragment() {
                 activity!!.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             val bluetoothAdapter = bluetoothManager.adapter
             if( bluetoothAdapter != null ) {
-                // start listening to bluetooth events
-                val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
-                this!!.context?.let { LocalBroadcastManager.getInstance(it).registerReceiver(btReceiver, filter) }
 
                 val pairedDevices: Set<BluetoothDevice> = bluetoothAdapter.bondedDevices
                 val MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1
@@ -101,23 +98,13 @@ class SecondFragment : Fragment() {
         }
     }
 
-    // Create a BroadcastReceiver for ACTION_FOUND.
-    private val btReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when(intent.action) {
-                BluetoothDevice.ACTION_FOUND -> {
-                    val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                    Log.d(TAG, "Discovered a device")
-                    btDeviceViewAdapter.insertDeviceAtBack(device)
-                }
-            }
-        }
-    }
 
+    public fun foundDevice( device : BluetoothDevice ) {
+        btDeviceViewAdapter.insertDeviceAtBack(device)
+    }
     override fun onDestroyView() {
         super.onDestroyView()
         Log.d(TAG, "Device search stopped")
-        this!!.context?.let { LocalBroadcastManager.getInstance(it).unregisterReceiver(btReceiver) }
     }
 }
 

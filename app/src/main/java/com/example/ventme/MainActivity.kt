@@ -17,11 +17,12 @@ import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.navigation.NavController
+import androidx.fragment.app.Fragment
 import androidx.navigation.Navigation
-import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
 
 private const val TAG = "VentMeMainActivity"
@@ -44,6 +45,35 @@ class MainActivity : AppCompatActivity() {
         }
 
         return true
+    }
+
+    private fun insertSamples( pressureSamples : List<Number>, airflowSamples : List<Number> ) {
+        val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val fgs = navHostFragment!!.childFragmentManager.fragments
+        if( fgs.size > 0 ) {
+            val currentFragment = navHostFragment!!.childFragmentManager.fragments[0]
+            if( currentFragment is FirstFragment ) {
+                val plotFrag = currentFragment as FirstFragment
+                plotFrag.insertSample(pressureSamples,airflowSamples,
+                    (0..100).random(),
+                    (0..100).random(),
+                    (0..100).random() )
+            }
+        }
+    }
+
+    private fun foundBtDevice( device : BluetoothDevice ) {
+        val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val fgs = navHostFragment!!.childFragmentManager.fragments
+        if( fgs.size > 0 ) {
+            val currentFragment = navHostFragment!!.childFragmentManager.fragments[0]
+            if( currentFragment is SecondFragment ) {
+                val btFrag = currentFragment as SecondFragment
+                btFrag.foundDevice(device)
+            }
+        }
+        //val currentFragment = navHostFragment!!.childFragmentManager.fragments[0] as SecondFragment
+        //currentFragment.foundDevice(device)
     }
 
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -91,6 +121,13 @@ class MainActivity : AppCompatActivity() {
                 Snackbar.make(view, status, Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
+        val s1 = listOf<Number>(1, 4, 2, 8, 4, 16, 8, 32, 16, 64, 3)
+        val s2 = listOf<Number>(5, 2, 10, 5, 20, 10, 40, 20, 80, 40, 20)
+        Log.d(TAG, "Running insert sample")
+        Timer().scheduleAtFixedRate( object : TimerTask() {
+            override fun run() { insertSamples(s1,s2) }
+        }, 1000,1000)
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -105,11 +142,12 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_find_vent_bt -> {
-                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_FirstFragment_to_SecondFragment)
+                //Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_FirstFragment_to_SecondFragment)
+                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_to_SecondFragment)
                 true
             }
             R.id.action_find_vent_wifi -> {
-                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_FirstFragment_to_WifiFragment)
+                Navigation.findNavController( this, R.id.nav_host_fragment).navigate(R.id.action_to_WifiFragment)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -130,6 +168,7 @@ class MainActivity : AppCompatActivity() {
                 BluetoothDevice.ACTION_FOUND -> {
                     val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                     Log.d(TAG, "Found a Bluetooth device :" + device.name)
+                    foundBtDevice( device )
                 }
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
                     val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.STATE_OFF)

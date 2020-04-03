@@ -5,34 +5,30 @@
     android:id="@+id/linearLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
+  
     <com.androidplot.xy.XYPlot
         android:id="@+id/pressure"
         style="@style/APDefacto"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-        ap:domainTitle="time"
         ap:layout_constraintBottom_toTopOf="@+id/airflow"
         ap:layout_constraintTop_toTopOf="parent"
-        ap:lineLabelRotationBottom="-45"
         ap:lineLabels="left|bottom"
         ap:rangeTitle="cmH2O"
-        ap:title="Pressure" />
+        ap:renderMode="use_background_thread"
+        ap:title="Pressure"
+        tools:layout_editor_absoluteX="26dp" />
 
     <com.androidplot.xy.XYPlot
         android:id="@+id/airflow"
         style="@style/APDefacto"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginBottom="16dp"
-        ap:domainTitle="time"
         ap:layout_constraintBottom_toBottomOf="parent"
         ap:layout_constraintTop_toBottomOf="@id/pressure"
-        ap:lineLabelRotationBottom="-45"
         ap:lineLabels="left|bottom"
         ap:rangeTitle="ml"
+        ap:renderMode="use_background_thread"
         ap:title="Airflow" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

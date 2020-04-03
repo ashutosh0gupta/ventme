@@ -6,17 +6,80 @@
     android:layout_height="match_parent"
     tools:context=".FirstFragment">
 
-    <include layout="@layout/simple_plot" />
-
-    <Button
-        android:id="@+id/button_first"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/infoboxes"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginBottom="16dp"
-        android:text="@string/find_vent_bt"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/plotlayout"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/brnum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="36sp" />
+
+        <TextView
+            android:id="@+id/brview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/br"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/o2num"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="36sp" />
+
+        <TextView
+            android:id="@+id/o2view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/o2"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/peepnum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="36sp" />
+
+        <TextView
+            android:id="@+id/peepview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/peep"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/plotlayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@+id/infoboxes"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+      <include
+          android:id="@+id/plots"
+          layout="@layout/simple_plot" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
