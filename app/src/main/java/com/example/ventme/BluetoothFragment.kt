@@ -106,15 +106,19 @@ class BluetoothFragment : Fragment() {
 }
 
 
-class btDeviceAdapter(private val myDataset:  ArrayList<BluetoothDevice>) :
+class btDeviceAdapter( private val myDataset:  ArrayList<BluetoothDevice>) :
     RecyclerView.Adapter<btDeviceAdapter.MyViewHolder>() {
 
-    // Provide a reference to the views for each data item
-    // Complex data items may need more than one view per item, and
-    // you provide access to all the views for a data item in a view holder.
-    // Each data item is just a string in this case that is shown in a TextView.
-    class MyViewHolder(val iview: View) : RecyclerView.ViewHolder(iview)
-
+    inner class MyViewHolder(val iview: View) : RecyclerView.ViewHolder(iview), View.OnClickListener {
+        init{
+            iview.setOnClickListener(this);
+          }
+        override fun onClick(view: View) {
+            val dev : BluetoothDevice = myDataset[layoutPosition]
+            //runConnectBluetoothService(dev)
+        }
+    }
+    //class MyViewHolder(val iview: View) : RecyclerView.ViewHolder(iview)
 
     // Create new views (invoked by the layout manager)
     override fun onCreateViewHolder(parent: ViewGroup,
@@ -128,9 +132,8 @@ class btDeviceAdapter(private val myDataset:  ArrayList<BluetoothDevice>) :
 
     // Replace the contents of a view (invoked by the layout manager)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        // - get element from your dataset at this position
-        // - replace the contents of the view with that element
         val textView = holder.iview.findViewById(R.id.bt_device_name) as TextView
+        //holder.d = myDataset[position]
         textView.text = myDataset[position].name + "\n" + myDataset[position].address
     }
 

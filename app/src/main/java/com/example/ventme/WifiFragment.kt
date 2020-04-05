@@ -11,6 +11,10 @@ import androidx.navigation.fragment.findNavController
 
 class WifiFragment : Fragment() {
 
+    // Location of server to get hold of list of devices
+    // todo: make it adjustable
+    var url_server : String = "192.168.0.0"
+
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?,
             savedInstanceState: Bundle?
