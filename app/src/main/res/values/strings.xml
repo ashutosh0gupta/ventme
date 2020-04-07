@@ -9,6 +9,7 @@
     <string name="previous">Previous</string>
     <string name="on">On</string>
     <string name="off">Off</string>
+    <string name="set">SET</string>
 
     <string name="o2">%\nO2</string>
     <string name="br">pm\nRR</string>
@@ -17,6 +18,7 @@
     <string name="pavg">cmH2O\nPAVG</string>
     <string name="cdyn">ml/cmH2O\nCdyn</string>
     <string name="ie">\nI:E</string>
+    <string name="tidalvolume">ml\nVi</string>
 
     <string name="unknown">--</string>
 

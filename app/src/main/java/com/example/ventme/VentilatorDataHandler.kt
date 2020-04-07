@@ -1,5 +1,11 @@
 package com.example.ventme
 
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
+import com.androidplot.xy.FixedSizeEditableXYSeries
+
+private const val TAG = "DATAHandler"
 
 class VentilatorDataHandler() {
 
@@ -18,6 +24,7 @@ class VentilatorDataHandler() {
         var setOxygen : Number? = null
         var setPeep : Number? = null
         var setRespiratoryRate : Number? = null
+        var setTidalVolume : Number? = null
         var setRatioIE : String? = null
 
         // data
@@ -35,15 +42,29 @@ class VentilatorDataHandler() {
         var ratioIE : String? = null
         var tidalVolumePerBodyMass : Number? = null
 
+        // ---------------------------------
+        // deduce alarms
+        var resparationInactive : Boolean = false
+        var pressureOutOfBounds : Boolean = false
+        var tidalVolumeOutOfBounds : Boolean = false
     }
+    var pressureData : MutableList<Number> = MutableList(10000) { 0 }
+    var airflowData : MutableList<Number> = MutableList(10000) {0}
+    var tidalVolData : MutableList<Number> = MutableList(10000) { 0.0 }
+    private var pack : DataPack = DataPack()
 
-    var data : MutableList<DataPack> = mutableListOf<DataPack>()
+    //var data : MutableList<DataPack> = mutableListOf<DataPack>()
+
     var packetCounter : Int = 0
     var sampleRate : Int = 0
 
+    @RequiresApi(Build.VERSION_CODES.N)
     private fun checkAndUpdateData(pack : DataPack ) {
         if( (pack.packetCount != packetCounter + 1) or (pack.sampleRate != sampleRate) ) {
-            data.clear()
+            currentIndex = 0
+            pressureData.replaceAll { 0 }
+            airflowData.replaceAll { 0 }
+            tidalVolData.replaceAll { 0.0 }
         }
         packetCounter = pack.packetCount
         sampleRate = pack.sampleRate
@@ -61,38 +82,6 @@ class VentilatorDataHandler() {
             idxWrite += 1
         }
         return Pair(v, idxWrite)
-    }
-    var dummyPackCounter = 0
-    fun dummyPack() : DataPack {
-        var pack : DataPack = DataPack()
-        pack.packetCount = dummyPackCounter
-        pack.sampleRate = 100
-        pack.numSamples = 11
-
-        // read ventilator configuration
-        pack.setOxygen = (0..100).random()
-        pack.setPeep = (0..100).random()
-        pack.setRespiratoryRate = (0..100).random()
-        pack.setRatioIE = "1:2"
-
-        // read data collected by sensors
-        pack.oxygen = (0..100).random()
-        pack.respiratoryRate = (0..100).random()
-
-        pack.pressureSamples = mutableListOf(1, 4, 2, 8, 4, 16, 8, 32, 16, 64, 3)
-        pack.airflowSamples = mutableListOf(5, 2, 10, 5, 20, 10, 40, 20, 80, 40, 20)
-
-        pack.tidalVolumeSamples = null  // integrate dV
-        pack.pressureMax = (0..100).random()
-        pack.pEEP = (0..100).random()
-        pack.pressureAverage = (0..100).random()
-        pack.complianceDynamic = (0..100).random()
-        pack.respiratoryRate = (0..100).random()
-        pack.ratioIE = "1:3"
-        pack.tidalVolumePerBodyMass = null
-
-        dummyPackCounter = dummyPackCounter + 1
-        return pack
     }
 
     fun addRawPacket(rawPacket: ByteArray) : DataPack {
@@ -116,6 +105,7 @@ class VentilatorDataHandler() {
         pack.setOxygen = readVal(4)
         pack.setPeep = readVal(4)
         pack.setRespiratoryRate = readVal(4)
+        pack.setTidalVolume = readVal(4)
         pack.setRatioIE = readVal(4).toString()
 
         // read data collected by sensors
@@ -126,7 +116,84 @@ class VentilatorDataHandler() {
         for( i in 0..pack.numSamples ) {
             pack.airflowSamples.add( readVal(4) )
         }
-        data.add(pack)
+        this.pack = pack
+        updateDerivedValues()
+        return this.pack
+    }
+
+    fun writeToData(series: MutableList<Number>?, initialIndex : Int, samples : MutableList<Number>?  ) : Int {
+        if ( (samples == null) or (series == null) ) {
+            return initialIndex
+        }
+        var initialSamplePosition = 0
+        // if we have a long update then update only the trailpart
+        if( samples!!.size > series!!.size ) {
+            initialSamplePosition = samples.size - series.size
+        }
+        var index = initialIndex
+        for( sampleIndex in initialSamplePosition until samples.size) {
+            series[index] = samples[sampleIndex]
+            index += 1
+            if( index >= series.size ) {
+                index = 0
+            }
+        }
+        return index
+    }
+
+    var currentIndex = 0
+    fun updateDerivedValues() {
+        val newIndex = writeToData( pressureData, currentIndex, pack.pressureSamples )
+        writeToData( airflowData, currentIndex, pack.airflowSamples )
+        //integrate for tidal volume
+        val previousIndex = when(currentIndex) { 0 -> {tidalVolData.size-1} else -> currentIndex-1}
+        var v = tidalVolData[previousIndex] as Double
+        pack.tidalVolumeSamples = mutableListOf()
+        for( sample in pack.airflowSamples ) {
+            val dv = (sample as Int).toDouble() / sampleRate
+            //Log.d( TAG, "accumulated value of tidal volume $double_dv")
+            v += dv
+            pack.tidalVolumeSamples!!.add( v )
+        }
+        writeToData( tidalVolData, currentIndex, pack.tidalVolumeSamples )
+        currentIndex = newIndex
+    }
+
+    // dummy packet testing code
+    var dummyPackCounter = 0
+    fun dummyPack() : DataPack {
+        var pack : DataPack = DataPack()
+        pack.packetCount = dummyPackCounter
+        pack.sampleRate = 100
+        pack.numSamples = 11
+        checkAndUpdateData(pack)
+
+        // read ventilator configuration
+        pack.setOxygen = (0..100).random()
+        pack.setPeep = (0..100).random()
+        pack.setRespiratoryRate = (0..100).random()
+        pack.setTidalVolume = 200+50*(1..10).random()
+        pack.setRatioIE = "1:2"
+
+        // read data collected by sensors
+        pack.oxygen = (0..100).random()
+        pack.respiratoryRate = (0..100).random()
+
+        pack.pressureSamples = mutableListOf(1, 4, 2, 8, 4, 16, 8, 32, 16, 64, 3)
+        pack.airflowSamples = mutableListOf(5, 2, -50, -25, 20, -10, 40, 20, 60, -40, -20)
+
+        pack.tidalVolumeSamples = null  // integrate dV
+        pack.pressureMax = (0..100).random()
+        pack.pEEP = (0..100).random()
+        pack.pressureAverage = (0..100).random()
+        pack.complianceDynamic = (0..100).random()
+        pack.respiratoryRate = (0..100).random()
+        pack.ratioIE = "1:3"
+        pack.tidalVolumePerBodyMass = null
+
+        dummyPackCounter = dummyPackCounter + 1
+        this.pack = pack
+        updateDerivedValues()
         return pack
     }
 }

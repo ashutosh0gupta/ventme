@@ -64,7 +64,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:text="@string/peep"
-            android:textSize="14sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/ienum"
@@ -81,7 +81,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:text="@string/ie"
-            android:textSize="14sp" />
+            android:textSize="12sp" />
 
     </LinearLayout>
 
@@ -91,11 +91,116 @@
         android:layout_height="0dp"
         android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@+id/infoboxes"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toTopOf="@+id/setinfoboxes">
 
       <include
           android:id="@+id/plots"
           layout="@layout/simple_plot" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/setinfoboxes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="left"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/plotlayout">
+
+        <TextView
+            android:id="@+id/setvaluestag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/set"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/setbrnum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/setbrview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/br"
+            android:textSize="8sp" />
+
+        <TextView
+            android:id="@+id/settidalvolumnum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="18dp" />
+
+        <TextView
+            android:id="@+id/settidalvolum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/tidalvolume"
+            android:textSize="8sp" />
+
+        <TextView
+            android:id="@+id/seto2num"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/seto2view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/o2"
+            android:textSize="8sp" />
+
+        <TextView
+            android:id="@+id/setpeepnum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="18dp" />
+
+        <TextView
+            android:id="@+id/setpeepview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/peep"
+            android:textSize="8sp" />
+
+        <TextView
+            android:id="@+id/setienum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:text="@string/unknown"
+            android:textSize="18dp" />
+
+        <TextView
+            android:id="@+id/setieview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/ie"
+            android:textSize="8sp" />
 
     </LinearLayout>
 

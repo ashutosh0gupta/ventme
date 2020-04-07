@@ -1,13 +1,10 @@
 package com.example.ventme
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.androidplot.xy.*
 import kotlinx.android.synthetic.main.fragment_first.*
@@ -64,6 +61,11 @@ class DisplayFragment : Fragment() {
                     brnum.text = get_display_string(pack!!.respiratoryRate)
                     peepnum.text = get_display_string(pack!!.pEEP)
                     ienum.text = get_display_string(pack!!.ratioIE)
+                    seto2num.text = get_display_string(pack!!.setOxygen)
+                    setbrnum.text = get_display_string(pack!!.setRespiratoryRate)
+                    setpeepnum.text = get_display_string(pack!!.setPeep)
+                    setienum.text = get_display_string(pack!!.setRatioIE)
+                    settidalvolumnum.text = get_display_string(pack!!.setTidalVolume)
                 }
             })
         }else {
@@ -129,22 +131,33 @@ class DisplayFragment : Fragment() {
 //        // Log.w(TAG, "---> I am here <----" + lastDataTime.toString() )
 //    }
 
-    // process incoming data
-    fun insertPack( pack : VentilatorDataHandler.DataPack ) {
-        var idx = 0
-        for( sample in pack.pressureSamples ) {
-            seriesPressure.setY(sample,currentIndex)
-            if( idx < pack.airflowSamples.size ) {
-                seriesAirflow.setY(pack.airflowSamples[idx],currentIndex)
-            }
-            currentIndex += 1
-            idx += 1
-            if( currentIndex >= maxSamples ) {
-                currentIndex = 0
+    fun writeToPlotSeries( series: FixedSizeEditableXYSeries?, initialIndex : Int, samples : MutableList<Number>?  ) : Int {
+        if ( (samples == null) or (series == null) ) {
+            return initialIndex
+        }
+        var initialSamplePosition = 0
+        // if we have a long update then update only the trailpart
+        if( samples!!.size > series!!.size() ) {
+            initialSamplePosition = samples.size - series.size()
+        }
+        var index = initialIndex
+        for( sampleIndex in initialSamplePosition until samples.size) {
+            series.setY( samples[sampleIndex], index )
+            index += 1
+            if( index >= series.size() ) {
+                index = 0
             }
         }
-        seriesPressure.setY(null, currentIndex)
-        seriesAirflow.setY(null, currentIndex)
+        series.setY( null, index )
+        return index
+    }
+
+    // process incoming data
+    fun insertPack( pack : VentilatorDataHandler.DataPack ) {
+        val newIndex = writeToPlotSeries(seriesPressure, currentIndex, pack.pressureSamples )
+        writeToPlotSeries(seriesAirflow, currentIndex, pack.airflowSamples )
+        writeToPlotSeries(seriesTidalVolume, currentIndex, pack.tidalVolumeSamples )
+        currentIndex = newIndex
         if( sampleRate != pack.sampleRate || pack.packetCount != packetCount + 1) {
             // triggers cleanup if there is a loss of packets or change in sample rate
             resetPlots()
