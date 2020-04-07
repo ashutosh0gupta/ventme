@@ -17,6 +17,7 @@
         ap:rangeTitle="cmH2O"
         ap:renderMode="use_background_thread"
         ap:title="Pressure"
+        ap:graphMarginBottom="10dp"
         tools:layout_editor_absoluteX="26dp" />
 
     <com.androidplot.xy.XYPlot
@@ -24,11 +25,24 @@
         style="@style/APDefacto"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        ap:layout_constraintBottom_toBottomOf="parent"
+        ap:layout_constraintBottom_toBottomOf="@id/tidalvolume"
         ap:layout_constraintTop_toBottomOf="@id/pressure"
+        ap:lineLabels="left|bottom"
+        ap:rangeTitle="ml/sec"
+        ap:renderMode="use_background_thread"
+        ap:graphMarginBottom="10dp"
+        ap:title="Airflow" />
+
+    <com.androidplot.xy.XYPlot
+        android:id="@+id/tidalvolume"
+        style="@style/APDefacto"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        ap:layout_constraintBottom_toBottomOf="parent"
+        ap:layout_constraintTop_toBottomOf="@id/airflow"
         ap:lineLabels="left|bottom"
         ap:rangeTitle="ml"
         ap:renderMode="use_background_thread"
-        ap:title="Airflow" />
-
+        ap:graphMarginBottom="10dp"
+        ap:title="Tidal Volume" />
 </androidx.constraintlayout.widget.ConstraintLayout>

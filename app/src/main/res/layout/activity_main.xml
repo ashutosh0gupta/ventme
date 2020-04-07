@@ -30,6 +30,6 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
         app:backgroundTint="@color/colorDisconnected"
-        app:srcCompat="@android:drawable/stat_sys_data_bluetooth" />
+        app:srcCompat="@android:drawable/presence_offline" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -2,12 +2,10 @@ package com.example.ventme
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
@@ -28,41 +26,27 @@ private const val TAG = "VentMeMainActivity"
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var bluetoothManager: BluetoothManager
+    //private lateinit var bluetoothManager: BluetoothManager
 
+    private var ventilatorState : Int = Ventilator_DISCONNECTED
+    private var ventID : String? = null
+    private var dataHandler : VentilatorDataHandler = VentilatorDataHandler()
 
-    private fun checkBluetoothSupport(bluetoothAdapter: BluetoothAdapter?): Boolean {
-
-        if (bluetoothAdapter == null) {
-            Log.w(TAG, "Bluetooth is not supported")
-            return false
-        }
-
-        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Log.w(TAG, "Bluetooth LE is not supported")
-            return false
-        }
-
-        return true
+    companion object {
+        const val Ventilator_CONNECTED_VIA_BT = 1
+        const val Ventilator_CONNECTED_VIA_WIFI = 2
+        const val Ventilator_DISCONNECTED = 0
     }
 
-    var packetCounter : Long = 0
-    //todo develop a good data interface
-    private fun insertSamples( pressureSamples : List<Number>, airflowSamples : List<Number> ) {
+    private fun insertSamples( pack: VentilatorDataHandler.DataPack ) {
         val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
             val currentFragment = navHostFragment.childFragmentManager.fragments[0]
             if( currentFragment is DisplayFragment ) {
                 //val plotFrag = currentFragment as DisplayFragment
-                currentFragment.insertSample(
-                    packetCounter, 400,
-                    pressureSamples,airflowSamples,
-                    (0..100).random(),
-                    (0..100).random(),
-                    (0..100).random() )
+                currentFragment.insertPack( pack )
             }
-            packetCounter += 1
         }
     }
 
@@ -85,50 +69,28 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val bluetoothAdapter = bluetoothManager.adapter
+        // Register for system Bluetooth events
+        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+        filter.addAction(BluetoothDevice.ACTION_FOUND)
+        registerReceiver(receiver, filter)
 
-        // We can't continue without proper Bluetooth support
-        if ( checkBluetoothSupport(bluetoothAdapter)) {
-            // Register for system Bluetooth events
-            val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
-            filter.addAction(BluetoothDevice.ACTION_FOUND)
-            registerReceiver(bluetoothReceiver, filter)
-            if (!bluetoothAdapter.isEnabled) {
-                Log.d(TAG, "Bluetooth is currently disabled...enabling")
-                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff)) )
-                bluetoothAdapter.enable()
-            } else {
-                Log.d(TAG, "Bluetooth enabled...starting services")
-                //fab.setBackgroundTintList(0xFF00FF00)
-                fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorDisconnected)) )
-                //fab.setBackgroundColor(0xFF00FF00)
-            }
-        }
-
+        fab.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff))
         fab.setOnClickListener { view ->
-                var status : String
-                if( bluetoothAdapter == null ) {
-                    status = "No Bluetooth in the system"
-                }else if( bluetoothAdapter.isEnabled ) {
-                    if( 1 == 1 ) {
-                        status = "No ventilator is connected"
-                    }else {
-                        status = "Ventilator " + "ventid" +  " is connected"
-                    }
-                } else {
-                    status = "Bluetooth is disabled."
+                var status : String = "This message should not be visible!"
+                if( ventilatorState == Ventilator_DISCONNECTED ) {
+                    status = "No ventilator connected!"
+                }else if( ventilatorState == Ventilator_CONNECTED_VIA_BT ) {
+                    status = "Ventilator $ventID is connected via bluetooth"
+                } else if( ventilatorState == Ventilator_CONNECTED_VIA_WIFI ) {
+                    status = "Ventilator $ventID is connected via bluetooth"
                 }
                 Snackbar.make(view, status, Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
-        val s1 = listOf<Number>(1, 4, 2, 8, 4, 16, 8, 32, 16, 64, 3)
-        val s2 = listOf<Number>(5, 2, 10, 5, 20, 10, 40, 20, 80, 40, 20)
-        Log.d(TAG, "Running insert sample")
         Timer().scheduleAtFixedRate( object : TimerTask() {
-            override fun run() { insertSamples(s1,s2) }
+            override fun run() { insertSamples( dataHandler.dummyPack() ) }
         }, 1000,1000)
 
     }
@@ -157,15 +119,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val bluetoothReceiver = object : BroadcastReceiver() {
+    fun updateFab( colorId: Int ) {
+        fab.backgroundTintList =  ColorStateList.valueOf(ContextCompat.getColor(applicationContext, colorId ))
+        when(ventilatorState) {
+            Ventilator_CONNECTED_VIA_BT -> {
+                fab.setImageDrawable(ContextCompat.getDrawable(applicationContext, android.R.drawable.stat_sys_data_bluetooth))
+            }
+            Ventilator_CONNECTED_VIA_WIFI -> {
+                // todo wifi ICON needs to be added
+                fab.setImageDrawable(ContextCompat.getDrawable(applicationContext, android.R.drawable.presence_offline))
+            }
+            Ventilator_DISCONNECTED ->{
+                fab.setImageDrawable(ContextCompat.getDrawable(applicationContext, android.R.drawable.presence_offline))
+            }
+        }
+        //fab.setImageDrawable(ContextCompat.getDrawable(applicationContext, android.R.drawable.))
+    }
+
+    // todo : workout all cases
+    private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when(intent.action) {
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorSearching)) )
+                    updateFab( R.color.colorSearching )
                     Log.d(TAG, "Bluetooth discovery started")
                 }
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                    fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected)) )
+                    updateFab( R.color.colorConnected )
                     Log.d(TAG, "Bluetooth discovery stopped")
                 }
                 BluetoothDevice.ACTION_FOUND -> {
@@ -178,15 +158,39 @@ class MainActivity : AppCompatActivity() {
 
                     when (state) {
                         BluetoothAdapter.STATE_ON -> {
-                            fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected)) );
+                            fab.backgroundTintList =
+                                ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected));
                             // what to do if on
                         }
                         BluetoothAdapter.STATE_OFF -> {
-                            // what to do if blue tooth is off
-                            fab.setBackgroundTintList( ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff)) );
+                            if(ventilatorState == Ventilator_CONNECTED_VIA_BT )
+                                ventilatorState = Ventilator_DISCONNECTED
+                            updateFab(R.color.colorOff)
                         }
                     }
                     Log.d(TAG, "Bluetooth state change")
+                }
+                BluetoothLeService.ACTION_GATT_CONNECTED -> {
+                    Log.d(TAG, "GATT connected")
+                    ventilatorState = Ventilator_CONNECTED_VIA_BT
+                    updateFab(R.color.colorConnected)
+                }
+                BluetoothLeService.ACTION_GATT_DISCONNECTED -> {
+                    Log.d(TAG, "GATT disconnected")
+                    if(ventilatorState == Ventilator_CONNECTED_VIA_BT )
+                        ventilatorState = Ventilator_DISCONNECTED
+                    updateFab(R.color.colorDisconnected)
+                }
+                BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED -> {
+                    //todo why this event exists
+                    Log.d(TAG, "service discovered")
+                }
+                BluetoothLeService.ACTION_DATA_AVAILABLE -> {
+
+                    Log.d(TAG, "Ventilator data received")
+                    val packet = intent.getSerializableExtra(BluetoothLeService.READ_DATA) as ByteArray
+                    val pack = dataHandler.addRawPacket( packet )
+                    insertSamples(pack)
                 }
             }
 
@@ -196,13 +200,6 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     override fun onDestroy() {
         super.onDestroy()
-        val bluetoothAdapter = bluetoothManager.adapter
-
-        if( bluetoothAdapter != null ) {
-            if (bluetoothAdapter.isEnabled) {
-            }
-
-            unregisterReceiver(bluetoothReceiver)
-        }
+        unregisterReceiver(receiver)
     }
 }
