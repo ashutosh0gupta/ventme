@@ -16,7 +16,7 @@
     <string name="pmax">cmH2O\nPmax</string>
     <string name="peep">cmH2O\nPEEP</string>
     <string name="pavg">cmH2O\nPAVG</string>
-    <string name="cdyn">ml/cmH2O\nCdyn</string>
+    <string name="cdyn">ml/mbar\nCdyn</string>
     <string name="ie">\nI:E</string>
     <string name="tidalvolume">ml\nVi</string>
 

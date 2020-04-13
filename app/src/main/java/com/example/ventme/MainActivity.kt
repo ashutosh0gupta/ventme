@@ -2,13 +2,11 @@ package com.example.ventme
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -31,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private var ventilatorState : Int = Ventilator_DISCONNECTED
     private var ventID : String? = null
     private var dataHandler : VentilatorDataHandler = VentilatorDataHandler()
+    private var bluetoothLeService: BluetoothLeService? = null
+    private var deviceAddress : String? = null
 
     companion object {
         const val Ventilator_CONNECTED_VIA_BT = 1
@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun foundBtDevice( device : BluetoothDevice ) {
+    private fun foundBtDevice( device : BluetoothDevice? ) {
         val navHostFragment: NavHostFragment? = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val fgs = navHostFragment!!.childFragmentManager.fragments
         if( fgs.size > 0 ) {
@@ -59,8 +59,6 @@ class MainActivity : AppCompatActivity() {
                 currentFragment.foundDevice(device)
             }
         }
-        //val currentFragment = navHostFragment!!.childFragmentManager.fragments[0] as BluetoothFragment
-        //currentFragment.foundDevice(device)
     }
 
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -74,11 +72,16 @@ class MainActivity : AppCompatActivity() {
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
         filter.addAction(BluetoothDevice.ACTION_FOUND)
+        filter.addAction(BluetoothFragment.ACTION_INITIATE_CONNECTION)
+        filter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED)
+        filter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED)
+        filter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED)
+        filter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE)
         registerReceiver(receiver, filter)
 
         fab.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorOff))
         fab.setOnClickListener { view ->
-                var status : String = "This message should not be visible!"
+                var status  = "This message should not be visible!"
                 if( ventilatorState == Ventilator_DISCONNECTED ) {
                     status = "No ventilator connected!"
                 }else if( ventilatorState == Ventilator_CONNECTED_VIA_BT ) {
@@ -89,9 +92,10 @@ class MainActivity : AppCompatActivity() {
                 Snackbar.make(view, status, Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
-        Timer().scheduleAtFixedRate( object : TimerTask() {
-            override fun run() { insertSamples( dataHandler.dummyPack() ) }
-        }, 1000,1000)
+//        Timer().scheduleAtFixedRate( object : TimerTask() {
+//            @RequiresApi(Build.VERSION_CODES.N)
+//            override fun run() { insertSamples( dataHandler.dummyPack() ) }
+//      }, 1000,1000)
 
     }
 
@@ -138,6 +142,7 @@ class MainActivity : AppCompatActivity() {
 
     // todo : workout all cases
     private val receiver = object : BroadcastReceiver() {
+        @RequiresApi(Build.VERSION_CODES.N)
         override fun onReceive(context: Context, intent: Intent) {
             when(intent.action) {
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
@@ -149,8 +154,8 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Bluetooth discovery stopped")
                 }
                 BluetoothDevice.ACTION_FOUND -> {
-                    val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                    Log.d(TAG, "Found a Bluetooth device :" + device.name)
+                    val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    Log.d(TAG, "Found a Bluetooth device :" + device!!.name)
                     foundBtDevice( device )
                 }
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
@@ -159,7 +164,7 @@ class MainActivity : AppCompatActivity() {
                     when (state) {
                         BluetoothAdapter.STATE_ON -> {
                             fab.backgroundTintList =
-                                ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected));
+                                ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.colorConnected))
                             // what to do if on
                         }
                         BluetoothAdapter.STATE_OFF -> {
@@ -168,7 +173,12 @@ class MainActivity : AppCompatActivity() {
                             updateFab(R.color.colorOff)
                         }
                     }
-                    Log.d(TAG, "Bluetooth state change")
+                    Log.d(TAG, "Bluetooth state change to $state")
+                }
+                BluetoothFragment.ACTION_INITIATE_CONNECTION -> {
+                    Log.d(TAG, "Connecting to BT device")
+                    val address = intent.getStringExtra( BluetoothFragment.EXTRA_DEVICE_ADDRESS )
+                    bindBluetoothService( address!! )
                 }
                 BluetoothLeService.ACTION_GATT_CONNECTED -> {
                     Log.d(TAG, "GATT connected")
@@ -187,19 +197,62 @@ class MainActivity : AppCompatActivity() {
                 }
                 BluetoothLeService.ACTION_DATA_AVAILABLE -> {
 
-                    Log.d(TAG, "Ventilator data received")
+                    //Log.d(TAG, "Ventilator data received")
+
                     val packet = intent.getSerializableExtra(BluetoothLeService.READ_DATA) as ByteArray
                     val pack = dataHandler.addRawPacket( packet )
-                    insertSamples(pack)
+                    if( pack != null ) {
+                        // either the pack is fully received or crashed
+                        insertSamples(pack)
+                    }
                 }
             }
 
         }
     }
 
+    private val serviceConnection : ServiceConnection = object : ServiceConnection {
+        @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.e(TAG, "Launching BT service")
+            bluetoothLeService = (service as BluetoothLeService.LocalBinder).service
+            if (!bluetoothLeService!!.initialize()) {
+                Log.e(TAG, "Unable to initialize Bluetooth")
+                return
+            }
+            // Automatically connects to the device upon successful start-up initialization.
+            bluetoothLeService!!.connect(
+                deviceAddress,
+                BluetoothFragment.serviceUUID,
+                BluetoothFragment.characteristicUUID
+            )
+        }
+
+        override fun onServiceDisconnected(componentName : ComponentName?) {
+            Log.e(TAG, "Stopping BT service")
+            bluetoothLeService = null
+        }
+    }
+
+    fun bindBluetoothService( address : String ) {
+        if(bluetoothLeService != null ) {
+            // if there is already a connection; disconnect and connect again
+            unbindService(serviceConnection)
+            bluetoothLeService = null
+        }
+        deviceAddress = address
+        val gattServiceIntent = Intent( this, BluetoothLeService::class.java)
+        Log.e(TAG, "Invoking bindService")
+        bindService( gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE )
+    }
+
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(receiver)
+        if( bluetoothLeService != null ) {
+            unbindService(serviceConnection)
+            bluetoothLeService = null
+        }
     }
 }

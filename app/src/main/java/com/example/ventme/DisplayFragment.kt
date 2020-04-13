@@ -17,7 +17,7 @@ class DisplayFragment : Fragment() {
 
     // display settings
     private var currentIndex : Int = 0
-    private var maxSamples : Int = 40
+    private var maxSamples : Int = 1000
     private var refreshRate : Long = 500 // in milliseconds
 
     //plotting data
@@ -29,9 +29,9 @@ class DisplayFragment : Fragment() {
     private lateinit var seriesTidalVolume : FixedSizeEditableXYSeries
 
     // control
-    private var sampleRate: Int = 0
+    //private var sampleRate: Int = 0
     private var lastDataTime : Date = Calendar.getInstance().time
-    private var packetCount : Int = 0
+    //private var packetCount : Int = 0
 
     // data
     private var pack : VentilatorDataHandler.DataPack? = null
@@ -54,7 +54,7 @@ class DisplayFragment : Fragment() {
         val now = Calendar.getInstance().time
         // if no update in last 10 seconds no data
         if( now.time - lastDataTime.time < 10000 ) {
-            activity!!.runOnUiThread(Runnable {
+            activity!!.runOnUiThread {
                 // o2num != null to sure if the fragment is active
                 if( (o2num != null) and (pack != null) ) {
                     o2num.text = get_display_string(pack!!.oxygen)
@@ -63,19 +63,19 @@ class DisplayFragment : Fragment() {
                     ienum.text = get_display_string(pack!!.ratioIE)
                     seto2num.text = get_display_string(pack!!.setOxygen)
                     setbrnum.text = get_display_string(pack!!.setRespiratoryRate)
-                    setpeepnum.text = get_display_string(pack!!.setPeep)
+                    setpeepnum.text = get_display_string(pack!!.setPEEP)
                     setienum.text = get_display_string(pack!!.setRatioIE)
                     settidalvolumnum.text = get_display_string(pack!!.setTidalVolume)
                 }
-            })
+            }
         }else {
-            activity!!.runOnUiThread( Runnable {
+            activity!!.runOnUiThread {
                 if( o2num != null ) {
                     o2num.text = getString(R.string.unknown)
                     brnum.text = getString(R.string.unknown)
                     peepnum.text = getString(R.string.unknown)
                 }
-            })
+            }
             resetPlots()
         }
         pressure.redraw()
@@ -83,7 +83,7 @@ class DisplayFragment : Fragment() {
         tidalVolume.redraw()
     }
 
-    fun resetPlots() {
+    private fun resetPlots() {
         for( i in 1..maxSamples) {
             seriesPressure.setX(i,i-1)
             seriesAirflow.setX(i,i-1)
@@ -153,18 +153,21 @@ class DisplayFragment : Fragment() {
     }
 
     // process incoming data
-    fun insertPack( pack : VentilatorDataHandler.DataPack ) {
-        val newIndex = writeToPlotSeries(seriesPressure, currentIndex, pack.pressureSamples )
+    fun insertPack( pack : VentilatorDataHandler.DataPack? ) {
+        if( pack == null ) {
+            resetPlots()
+        }
+        val newIndex = writeToPlotSeries(seriesPressure, currentIndex, pack!!.pressureSamples )
         writeToPlotSeries(seriesAirflow, currentIndex, pack.airflowSamples )
         writeToPlotSeries(seriesTidalVolume, currentIndex, pack.tidalVolumeSamples )
         currentIndex = newIndex
-        if( sampleRate != pack.sampleRate || pack.packetCount != packetCount + 1) {
-            // triggers cleanup if there is a loss of packets or change in sample rate
-            resetPlots()
-        }
+//        if( sampleRate != pack.sampleRate || pack.packetCount != packetCount + 1) {
+//            // triggers cleanup if there is a loss of packets or change in sample rate
+//            resetPlots()
+//        }
         this.pack = pack
-        packetCount = pack.packetCount
-        sampleRate = pack.sampleRate
+        //packetCount = pack.packetCount
+        //sampleRate = pack.sampleRate
         lastDataTime = Calendar.getInstance().time
     }
 
@@ -174,10 +177,7 @@ class DisplayFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_first, container, false)
-
-
-        return view
+        return inflater.inflate(R.layout.fragment_first, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

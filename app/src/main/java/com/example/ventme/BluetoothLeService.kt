@@ -64,6 +64,7 @@ class BluetoothLeService : Service() {
 
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     private val gattCallback = object : BluetoothGattCallback() {
+
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
             if ( newState == BluetoothProfile.STATE_CONNECTED) {
@@ -71,7 +72,7 @@ class BluetoothLeService : Service() {
                 broadcastUpdate(ACTION_GATT_CONNECTED )
                 Log.i(TAG, "Connected to GATT server.")
                 // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +  bluetoothGatt!!.discoverServices())
+                Log.i(TAG, "Attempting to start service discovery:" +  gatt!!.discoverServices())
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 serviceState = STATE_DISCONNECTED
                 Log.i(TAG, "Disconnected from GATT server.")
@@ -83,20 +84,23 @@ class BluetoothLeService : Service() {
             super.onServicesDiscovered(gatt, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
-                //List all services on the GATT device
+                //List all services on the GATT services
                 if (gatt != null) {
+                    for (service in gatt.services) {
+                        Log.d(TAG, "Found service: " + service.uuid.toString())
+                    }
                     gattService = gatt.getService(serviceUUID)
                 }
                 if (gattService != null) {
+                    for( ch in gattService!!.characteristics) {
+                        Log.d(TAG, "Found characteristics: " + ch.uuid.toString())
+                    }
                     val characteristic = gattService!!.getCharacteristic(characteristicUUID)
+                    bluetoothGatt!!.setCharacteristicNotification(characteristic, true)
                     val rs = gatt!!.readCharacteristic( characteristic )
                     if (!rs) {
                         Log.i(TAG, "Can't read mGattMiFloraFwCharacteristic")
                     }
-                }
-                // some kind of testing
-                for (service in gatt!!.services) {
-                    Log.d(TAG, "service: " + service.uuid.toString())
                 }
             } else {
                 Log.w(TAG, "onServicesDiscovered received: $status")
@@ -110,7 +114,10 @@ class BluetoothLeService : Service() {
         override fun onCharacteristicChanged( gatt: BluetoothGatt?,
                                               characteristic: BluetoothGattCharacteristic? ) {
             super.onCharacteristicChanged(gatt, characteristic)
-            broadcastUpdate( ACTION_DATA_AVAILABLE )
+            if( characteristic == gattService!!.getCharacteristic(characteristicUUID) ) {
+                lastMessageRead = characteristic!!.value
+                broadcastUpdate( ACTION_DATA_AVAILABLE )
+            }
         }
 
         override fun onCharacteristicRead( gatt: BluetoothGatt?,
@@ -120,9 +127,10 @@ class BluetoothLeService : Service() {
             if( status != BluetoothGatt.GATT_SUCCESS ) {
                 return
             }
-            Log.d(TAG, "characteristic: " + characteristic?.uuid.toString())
+            //Log.d(TAG, "characteristic: " + characteristic?.uuid.toString())
             if( characteristic == gattService!!.getCharacteristic(characteristicUUID) ) {
-                lastMessageRead = characteristic!!.value
+                val readValue = characteristic!!.value
+                lastMessageRead = readValue
                 broadcastUpdate( ACTION_DATA_AVAILABLE )
                 //todo figureout why do need the following call
                 //sendControlMsg( gatt )
