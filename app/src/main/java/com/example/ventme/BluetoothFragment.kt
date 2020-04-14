@@ -105,8 +105,8 @@ class BluetoothFragment : Fragment() {
                 Timer("Enabling Bluetooth", false).schedule(2000) { findAvailableDevices() }
                 return
             }
-            val pairedDevices: Set<BluetoothDevice> = bluetoothAdapter.bondedDevices
-            foundDevice(ArrayList(pairedDevices))
+            //val pairedDevices: Set<BluetoothDevice> = bluetoothAdapter.bondedDevices
+            //foundDevice(ArrayList(pairedDevices))
             // todo if permission denied we need to post a message
             ActivityCompat.requestPermissions(
                     activity!!, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1 )

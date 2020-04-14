@@ -15,10 +15,12 @@ private const val TAG = "VentPlotting"
 
 class DisplayFragment : Fragment() {
 
+    companion object {
+        const val maxSamples : Int = 1000 // number of points in the graph
+        const val refreshRate : Long = 500 // in milliseconds
+    }
     // display settings
     private var currentIndex : Int = 0
-    private var maxSamples : Int = 1000
-    private var refreshRate : Long = 500 // in milliseconds
 
     //plotting data
     private lateinit var pressure : XYPlot
@@ -39,12 +41,12 @@ class DisplayFragment : Fragment() {
     //private var peepValue : Number? = null
     //private var brValue : Number? = null
 
-    fun get_display_string( n : Number? ) : String {
+    private fun getDisplayString(n : Number? ) : String {
         if( n == null )
             return getString(R.string.unknown)
         return n.toString()
     }
-    fun get_display_string( n : String? ) : String {
+    private fun getDisplayString(n : String? ) : String {
         if( n == null )
             return getString(R.string.unknown)
         return n.toString()
@@ -57,15 +59,15 @@ class DisplayFragment : Fragment() {
             activity!!.runOnUiThread {
                 // o2num != null to sure if the fragment is active
                 if( (o2num != null) and (pack != null) ) {
-                    o2num.text = get_display_string(pack!!.oxygen)
-                    brnum.text = get_display_string(pack!!.respiratoryRate)
-                    peepnum.text = get_display_string(pack!!.pEEP)
-                    ienum.text = get_display_string(pack!!.ratioIE)
-                    seto2num.text = get_display_string(pack!!.setOxygen)
-                    setbrnum.text = get_display_string(pack!!.setRespiratoryRate)
-                    setpeepnum.text = get_display_string(pack!!.setPEEP)
-                    setienum.text = get_display_string(pack!!.setRatioIE)
-                    settidalvolumnum.text = get_display_string(pack!!.setTidalVolume)
+                    o2num.text = getDisplayString(pack!!.oxygen)
+                    brnum.text = getDisplayString(pack!!.respiratoryRate)
+                    peepnum.text = getDisplayString(pack!!.pEEP)
+                    ienum.text = getDisplayString(pack!!.ratioIE)
+                    seto2num.text = getDisplayString(pack!!.setOxygen)
+                    setbrnum.text = getDisplayString(pack!!.setRespiratoryRate)
+                    setpeepnum.text = getDisplayString(pack!!.setPEEP)
+                    setienum.text = getDisplayString(pack!!.setRatioIE)
+                    settidalvolumnum.text = getDisplayString(pack!!.setTidalVolume)
                 }
             }
         }else {
@@ -131,24 +133,24 @@ class DisplayFragment : Fragment() {
 //        // Log.w(TAG, "---> I am here <----" + lastDataTime.toString() )
 //    }
 
-    fun writeToPlotSeries( series: FixedSizeEditableXYSeries?, initialIndex : Int, samples : MutableList<Number>?  ) : Int {
+    private fun writeToPlotSeries(series: FixedSizeEditableXYSeries?, initialIndex : Int, samples : MutableList<Number>?  ) : Int {
         if ( (samples == null) or (series == null) ) {
             return initialIndex
         }
         var initialSamplePosition = 0
         // if we have a long update then update only the trailpart
-        if( samples!!.size > series!!.size() ) {
-            initialSamplePosition = samples.size - series.size()
-        }
+//        if( samples!!.size > series!!.size() ) {
+//            initialSamplePosition = samples.size - series.size()
+//        }
         var index = initialIndex
-        for( sampleIndex in initialSamplePosition until samples.size) {
-            series.setY( samples[sampleIndex], index )
+        for( sampleIndex in initialSamplePosition until samples!!.size) {
+            series!!.setY(samples[sampleIndex], index )
             index += 1
             if( index >= series.size() ) {
                 index = 0
             }
         }
-        series.setY( null, index )
+        series!!.setY( null, index )
         return index
     }
 
@@ -183,7 +185,7 @@ class DisplayFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        pressure = view.findViewById<XYPlot>(R.id.pressure)
+        pressure = view.findViewById(R.id.pressure)
         pressure.setDomainStep(StepMode.SUBDIVIDE, 1.0)
         pressure.setRangeStep(StepMode.SUBDIVIDE, 2.0)
         pressure.legend.isVisible = false
@@ -192,14 +194,14 @@ class DisplayFragment : Fragment() {
         seriesPressure = FixedSizeEditableXYSeries(null,maxSamples)
         pressure.addSeries(seriesPressure, seriesFormat)
 
-        airflow = view.findViewById<XYPlot>(R.id.airflow)
+        airflow = view.findViewById(R.id.airflow)
         airflow.setDomainStep(StepMode.SUBDIVIDE, 1.0)
         airflow.setRangeStep(StepMode.SUBDIVIDE, 2.0)
         airflow.legend.isVisible = false
         seriesAirflow = FixedSizeEditableXYSeries(null,maxSamples)
         airflow.addSeries(seriesAirflow, seriesFormat)
 
-        tidalVolume = view.findViewById<XYPlot>(R.id.tidalvolume)
+        tidalVolume = view.findViewById(R.id.tidalvolume)
         tidalVolume.setDomainStep(StepMode.SUBDIVIDE, 1.0)
         tidalVolume.setRangeStep(StepMode.SUBDIVIDE, 2.0)
         tidalVolume.legend.isVisible = false

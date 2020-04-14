@@ -99,7 +99,7 @@ class BluetoothLeService : Service() {
                     bluetoothGatt!!.setCharacteristicNotification(characteristic, true)
                     val rs = gatt!!.readCharacteristic( characteristic )
                     if (!rs) {
-                        Log.i(TAG, "Can't read mGattMiFloraFwCharacteristic")
+                        Log.i(TAG, "Can't read characteristic")
                     }
                 }
             } else {

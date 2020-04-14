@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import java.nio.ByteBuffer
 import kotlin.experimental.and
+import kotlin.math.abs
 
 private const val TAG = "DATAHandler"
 //todo : dumping data into file
@@ -56,15 +57,18 @@ class VentilatorDataHandler() {
         var tidalVolumeOutOfBounds : Boolean = false
 
     }
-    var pressureData : MutableList<Number> = MutableList(10000) { 0 }
-    var airflowData : MutableList<Number> = MutableList(10000) {0}
-    var tidalVolData : MutableList<Number> = MutableList(10000) { 0.0 }
-    private var pack : DataPack = DataPack()
 
     companion object{
+        const val historyLength = 10000 // 200 sec samples
         const val expectedHeader = 0xAA55AA55.toInt()
         const val expectedFooter = 0x55AA55AA.toInt()
     }
+
+    var pressureData : MutableList<Number> = MutableList(historyLength) { 0 }
+    var airflowData : MutableList<Number> = MutableList(historyLength) {0}
+    var tidalVolData : MutableList<Number> = MutableList(historyLength) { 0.0 }
+    private var pack : DataPack = DataPack()
+
     //var data : MutableList<DataPack> = mutableListOf<DataPack>()
 
     var packetCounter : Int = 0
@@ -130,9 +134,9 @@ class VentilatorDataHandler() {
 
     //-------------------------------------
     // data from device
-    var oxygen : Number? = null
-    var pressureSamples : MutableList<Number> = mutableListOf<Number>()
-    var airflowSamples : MutableList<Number> = mutableListOf<Number>()
+    //var oxygen : Number? = null
+    //var pressureSamples : MutableList<Number> = mutableListOf<Number>()
+    //var airflowSamples : MutableList<Number> = mutableListOf<Number>()
 
 
     private var streamSize = 2000
@@ -348,6 +352,24 @@ class VentilatorDataHandler() {
             pack.tidalVolumeSamples!!.add( v )
         }
         writeToData( tidalVolData, currentIndex, pack.tidalVolumeSamples )
+        if( currentIndex % DisplayFragment.maxSamples < pack.numSamples ) {
+            // some condition to evaluate the situation
+//            var min = tidalVolData[0].toFloat()
+//            var max = tidalVolData[0].toFloat()
+//            for( v in tidalVolData ) {
+//                val v = tidalVolData[i].toFloat()
+//                if( v < min )
+//                    min = v
+//                if( v > max )
+//                    max = v
+//            }
+//            //val min = tidalVolData.min()
+//            //val max = tidalVolData.max()
+//            if( abs(min) > (max-min)/10 ) {
+//                for( i in 0 until tidalVolData.size )
+//                    tidalVolData[i] = tidalVolData[i].toFloat() - min
+//            }
+        }
         currentIndex = newIndex
     }
 
