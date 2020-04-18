@@ -1,7 +1,8 @@
 db.sqlite3
-studenthome/images
-studenthome/migrations
+ventme/images
+ventme/migrations
+ventme/__pycache__/
 account/migrations
-attendance/__pycache__/
-studenthome/__pycache__/
 account/__pycache__/
+ventme_settings/__pycache__/
+ventme_settings/.env
