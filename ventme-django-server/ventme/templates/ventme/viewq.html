@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block body_attr %}
+{% endblock %}
+
+{% block pagestyle %}
+<style>
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 80%;
+    border: 1px solid #dddddd
+  }
+
+  td,
+  th {
+    text-align: left;
+    padding: 8px;
+  }
+
+  tr:nth-child(even) {
+    background-color: #dddddd;
+  }
+  tr:nth-child(odd) {
+    background-color: #eeeeee;
+  }
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<h1>{{ q.q }} </h1>
+
+<div>
+  <table>
+    {% include 'studenthome/qoption.html' with op=op1 ans=q.ans1 %}
+    {% include 'studenthome/qoption.html' with op=op2 ans=q.ans2 %}
+    {% include 'studenthome/qoption.html' with op=op3 ans=q.ans3 %}
+    {% include 'studenthome/qoption.html' with op=op4 ans=q.ans4 %}
+    {% include 'studenthome/qoption.html' with op=op5 ans=q.ans5 %}
+    {% include 'studenthome/qoption.html' with op=op6 ans=q.ans6 %}
+    {% include 'studenthome/qoption.html' with op=op7 ans=q.ans7 %}
+    {% include 'studenthome/qoption.html' with op=op8 ans=q.ans8 %}
+    {% include 'studenthome/qoption.html' with op=op9 ans=q.ans9 %}
+    {% include 'studenthome/qoption.html' with op=op10 ans=q.ans10 %}
+    {% include 'studenthome/qoption.html' with op=op11 ans=q.ans11 %}
+    {% include 'studenthome/qoption.html' with op=op12 ans=q.ans12 %}
+    {% include 'studenthome/qoption.html' with op=op13 ans=q.ans13 %}
+    {% include 'studenthome/qoption.html' with op=op14 ans=q.ans14 %}
+    {% include 'studenthome/qoption.html' with op=op15 ans=q.ans15 %}
+    {% include 'studenthome/qoption.html' with op=op16 ans=q.ans16 %}
+    {% include 'studenthome/qoption.html' with op=op17 ans=q.ans17 %}
+    {% include 'studenthome/qoption.html' with op=op18 ans=q.ans18 %}
+    {% include 'studenthome/qoption.html' with op=op19 ans=q.ans19 %}
+    {% include 'studenthome/qoption.html' with op=op20 ans=q.ans20 %}
+  </table> 
+</div>
+
+{% endblock %}

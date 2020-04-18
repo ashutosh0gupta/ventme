@@ -59,14 +59,35 @@ class VentilatorDataHandler() {
     }
 
     companion object{
+
         const val historyLength = 10000 // 200 sec samples
+
         const val expectedHeader = 0xAA55AA55.toInt()
-        const val expectedFooter = 0x55AA55AA.toInt()
+        const val expectedFooter = 0x5A5A5A5A.toInt()
+        const var streamSize = 2000
     }
 
+    var currentIndex = 0
     var pressureData : MutableList<Number> = MutableList(historyLength) { 0 }
     var airflowData : MutableList<Number> = MutableList(historyLength) {0}
     var tidalVolData : MutableList<Number> = MutableList(historyLength) { 0.0 }
+    var maxMinPositions : MutableList<Number> = MutableList(historyLength) { 0.0 }
+    var derivedPmax : Number? = null
+    var derivedPEEP : Number? = null
+    var derivedRR   : Number? = null
+    var derivedRatioIE : String? = null
+
+    private fun resetHistory() {
+        currentIndex = 0
+        pressureData.replaceAll { 0 }
+        airflowData.replaceAll { 0 }
+        tidalVolData.replaceAll { 0.0 }
+        derivedPmax = null
+        derivedPEEP = null
+        derivedRR = null
+        derivedRatioIE = null
+    }
+
     private var pack : DataPack = DataPack()
 
     //var data : MutableList<DataPack> = mutableListOf<DataPack>()
@@ -76,22 +97,12 @@ class VentilatorDataHandler() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     private fun checkAndUpdateData(pack : DataPack, header: Int, packetSize : Int ) : Boolean {
-
-//        if( (pack.packetCount != packetCounter + 1 && pack.packetCount != 0) or
-//            (pack.sampleRate != sampleRate) ) {
-        val expectedPacketSize : Int = 25 + pack.numSamples*12
+        val expectedPacketSize : Int = 25 + pack.numSamples*6
         var response = true
-
-//        Log.d( TAG, "${pack.packetCount} != ${packetCounter}")
-//        Log.d( TAG, "${expectedPacketSize} != ${packetSize}")
-//        Log.d( TAG, "${expectedHeader} != ${header}")
 
         if( (pack.packetCount != packetCounter + 1 && pack.packetCount != Short.MIN_VALUE.toInt() ) or
             ( expectedPacketSize != packetSize ) or (header != expectedHeader ) ) {
-            currentIndex = 0
-            pressureData.replaceAll { 0 }
-            airflowData.replaceAll { 0 }
-            tidalVolData.replaceAll { 0.0 }
+            resetHistory()
             response = false
         }
         packetCounter = pack.packetCount
@@ -116,20 +127,20 @@ class VentilatorDataHandler() {
     //    errorCode   : S   from a list of codes [ to be defined] [10 bytes header]
     //
     //    setOxygen     : B   in %
-    //    setPeep       : S   in mbar
+    //    setPeep       : S   in h2ocm
     //    setRR         : B   in pm
     //    setTidalVol   : S   in ml
     //    setIERatio    : B   in [Values 1 = 1:1  2 = 2:1  3 = 3:1 .... -2 = 1:2, -3 = 3:1 ]
     //    future2       : 3 bytes padding for future needs [ 10 bytes set data]
     //
     //    oxygen          : B in %
-    //    pressureSamples : I x N   in mbar
-    //    airflowSamples  : I x N   in lpm
-    //    tidalVolSamples : I x N   in ml
-    //     ####           : BBBB  marks end of packet [1 + N*12 bytes + 4]
+    //    pressureSamples : I x S   in 10^-2 h2ocm
+    //    airflowSamples  : I x S   in 10^-2 lpm
+    //    tidalVolSamples : I x S   in 10^-2 ml
+    //    0x5A5A5A5A      : BBBB  marks end of packet [1 + N*6 bytes + 4]
     //
     //   Sampling is done at the rate of 100 Hz
-    //   and 10 packets are sent in every second. Therefore, N = 10
+    //   and 5 packets are sent in every second. Therefore, N = 20
     //
 
     //-------------------------------------
@@ -139,26 +150,11 @@ class VentilatorDataHandler() {
     //var airflowSamples : MutableList<Number> = mutableListOf<Number>()
 
 
-    private var streamSize = 2000
     private var packetStartPoint : Int = 0
     private var packetEndPoint : Int = 0
     private var dataPosition : Int = 0
     private var inputStream : ByteArray = ByteArray(streamSize) { _ -> 0 }
 
-//    private fun readInt( numBytes : Int, idx: Int ) : Pair<Int,Int>{
-//        assert( packetEndPoint >= idx + numBytes )
-//        var v = 0
-//        var shift = 1
-//        var idxRead : Int = idx
-//        // correct handling of signed unsigned numbers
-//        for( i in 0..numBytes) {
-//            v += inputStream[idxRead] * shift
-//            shift *= 256
-//            idxRead += 1
-//            idxRead %= inputStream.size
-//        }
-//        return Pair(v, idxRead)
-//    }
 
     private val hexArray = "0123456789ABCDEF".toCharArray()
     fun bytesToHex(bytes: ByteArray, start : Int, end : Int ): String {
@@ -182,15 +178,6 @@ class VentilatorDataHandler() {
     @RequiresApi(Build.VERSION_CODES.N)
     fun addRawPacket(rawPacket: ByteArray) : DataPack? {
         //Log.d(TAG, "Packet received ${bytesToHex(rawPacket, 0, rawPacket.size )}")
-//        if( dataPosition == 0 ) {
-//            if( rawPacket.size < 20 )
-//                return null
-//            // After reset we need to check if the header is there
-//            //Log.d(TAG, "Header matched ${rawPacket.toString(Charsets.UTF_8)}")
-//            packetStartPoint = dataPosition
-//            packetEndPoint = dataPosition // toDetect new packet processing has started
-//        }
-//        val inHeader : Boolean = ( dataPosition <= 4 )
         for( b in rawPacket ) {
             inputStream[dataPosition] = b
             dataPosition += 1
@@ -235,13 +222,6 @@ class VentilatorDataHandler() {
             packetLength += inputStream.size
         }
 
-//        var packetIndex = packetStartPoint
-//        fun readVal(numBytes: Int): Int {
-//            var returnPair = readInt(numBytes, packetIndex)
-//            packetIndex = returnPair.second
-//            return returnPair.first
-//        }
-
         val pack = DataPack()
         val packetBuffer = ByteBuffer.wrap(inputStream)
 
@@ -274,41 +254,18 @@ class VentilatorDataHandler() {
         packetBuffer.get()
         packetBuffer.get()
 
+        // data received at 100 times to avoid transporting decimals
 
         pack.oxygen = packetBuffer.get().toInt()  //1
-        for (i in 0..pack.numSamples-1) {
-            pack.pressureSamples.add( packetBuffer.int.toFloat()/100 )
+        for (i in 0 until pack.numSamples) {
+            pack.pressureSamples.add( packetBuffer.short.toFloat()/100 )
         }
-        for (i in 0..pack.numSamples-1) {
-            pack.airflowSamples.add( packetBuffer.int.toFloat()/100 )
+        for (i in 0 until pack.numSamples) {
+            pack.airflowSamples.add( packetBuffer.short.toFloat()/100 )
         }
-        for (i in 0..pack.numSamples-1) {
-            pack.tidalVolumeSamples!!.add( packetBuffer.int.toFloat()/100 )
+        for (i in 0 until pack.numSamples) {
+            pack.tidalVolumeSamples!!.add( packetBuffer.short.toFloat()/100 )
         }
-
-
-        // read control bytes
-//        pack.packetCount = readVal(8)
-//        pack.sampleRate = readVal(2)
-//        pack.numSamples = readVal(2)
-
-
-        // read ventilator configuration
-//        pack.setOxygen = readVal(4)
-//        pack.setPEEP = readVal(4)
-//        pack.setRespiratoryRate = readVal(4)
-//        pack.setTidalVolume = readVal(4)
-//        pack.setRatioIE = readVal(4).toString()
-
-        // read data collected by sensors
-//        pack.oxygen = readVal(4)
-//        for (i in 0..pack.numSamples) {
-//            pack.pressureSamples.add(readVal(4))
-//        }
-//        for (i in 0..pack.numSamples) {
-//            pack.airflowSamples.add(readVal(4))
-//        }
-//
 
         packetStartPoint = 0
         packetEndPoint = 0
@@ -337,39 +294,105 @@ class VentilatorDataHandler() {
         return index
     }
 
-    var currentIndex = 0
-    fun updateDerivedValues() {
-        val newIndex = writeToData( pressureData, currentIndex, pack.pressureSamples )
-        writeToData( airflowData, currentIndex, pack.airflowSamples )
-        //integrate for tidal volume
+    private fun actionTime( timing : Int ) : Boolean {
+        val minRange = DisplayFragment.maxSamples - (timing+1)*pack.numSamples
+        val maxRange = DisplayFragment.maxSamples - timing*pack.numSamples
+        val current = currentIndex % DisplayFragment.maxSamples
+        if( current in (minRange + 1)..maxRange) {
+            return true
+        }
+        return false
+    }
+
+    private fun computingTidalVolume() : Boolean {
+        var driftCorrection = false
         val previousIndex = when(currentIndex) { 0 -> {tidalVolData.size-1} else -> currentIndex-1}
-        var v = tidalVolData[previousIndex] as Double
+        // drift correction
+        if( actionTime(0 ) ) {
+            // some condition to evaluate the situation
+            var min = tidalVolData[previousIndex].toFloat()
+            var max = tidalVolData[previousIndex].toFloat()
+            var idx = previousIndex
+            for( i in 0 until DisplayFragment.maxSamples ) {
+                val v = tidalVolData[idx].toFloat()
+                if( v < min )
+                    min = v
+                if( v > max )
+                    max = v
+                idx = when( idx ) { 0 -> {tidalVolData.size-1} else -> idx - 1 }
+            }
+
+            if( abs(min) > (max-min)/10 ) {
+                for( i in 0 until tidalVolData.size ) {
+                    tidalVolData[i] = tidalVolData[i].toFloat() - min
+                }
+                driftCorrection = true
+            }
+        }
+
+        // updating the pack
         pack.tidalVolumeSamples = mutableListOf()
+        if( driftCorrection ) {
+            var idx = (currentIndex - DisplayFragment.maxSamples) % tidalVolData.size
+            for( i in 0 until DisplayFragment.maxSamples ) {
+                pack.tidalVolumeSamples!!.add( tidalVolData[idx] )
+               idx = ( idx + 1) % tidalVolData.size
+            }
+        }
+        // integrate new data
+        var v = tidalVolData[previousIndex] as Double
         for( sample in pack.airflowSamples ) {
+            // ml = (1000/60)*(lpm/Hz)
             val dv = 1000*sample.toDouble() / (60*sampleRate)
             //Log.d( TAG, "accumulated value of tidal volume $double_dv")
             v += dv
             pack.tidalVolumeSamples!!.add( v )
         }
-        writeToData( tidalVolData, currentIndex, pack.tidalVolumeSamples )
-        if( currentIndex % DisplayFragment.maxSamples < pack.numSamples ) {
-            // some condition to evaluate the situation
-//            var min = tidalVolData[0].toFloat()
-//            var max = tidalVolData[0].toFloat()
-//            for( v in tidalVolData ) {
-//                val v = tidalVolData[i].toFloat()
-//                if( v < min )
-//                    min = v
-//                if( v > max )
-//                    max = v
-//            }
-//            //val min = tidalVolData.min()
-//            //val max = tidalVolData.max()
-//            if( abs(min) > (max-min)/10 ) {
-//                for( i in 0 until tidalVolData.size )
-//                    tidalVolData[i] = tidalVolData[i].toFloat() - min
-//            }
+        return driftCorrection
+    }
+
+    private fun getMinMax( data: MutableList<Number>, position : Int, length : Int ) : Pair<Float,Float> {
+        var idx = position
+        var min = data[idx].toFloat()
+        var max = data[idx].toFloat()
+        for( i in 0 until length ) {
+            val v = pressureData[idx].toFloat()
+            if( v < min )
+                min = v
+            if( v > max )
+                max = v
+            idx = (idx+1) % data.size
         }
+        return Pair(min,max)
+    }
+
+    private fun analyzePressure() {
+        if( actionTime(1 ) ) {
+            var idx = (currentIndex - DisplayFragment.maxSamples) % tidalVolData.size
+            var minMax = getMinMax( pressureData, idx, DisplayFragment.maxSamples )
+            derivedPEEP = minMax.first
+            derivedPmax = minMax.second
+            val scale = derivedPmax!!.toFloat()-derivedPEEP!!.toFloat()
+
+            for( i in 0 until DisplayFragment.maxSamples ) {
+                getMinMax( pressureData, idx, )
+                if( isLocalMax( idx, 10, scale ) ) {
+
+                }
+                idx = ( idx + 1) % tidalVolData.size
+            }
+        }
+        pack.pressureMax = derivedPmax
+        pack.pEEP = derivedPEEP
+        pack.respiratoryRate = derivedRR
+        pack.ratioIE = derivedRatioIE
+    }
+    private fun updateDerivedValues() {
+        val newIndex = writeToData( pressureData, currentIndex, pack.pressureSamples )
+        writeToData( airflowData, currentIndex, pack.airflowSamples )
+        computingTidalVolume()
+        //integrate for tidal volume
+        writeToData( tidalVolData, currentIndex, pack.tidalVolumeSamples )
         currentIndex = newIndex
     }
 

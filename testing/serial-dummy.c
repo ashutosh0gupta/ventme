@@ -92,7 +92,7 @@ int write_int( int s, int idx ) {
   /* return idx + 4; */
 }
 
-void sendPacket( int fd, int* pressure, int* flow, int* tidal, int size, int oxygen ){
+void sendPacket( int fd, short* pressure, short* flow, short* tidal, int size, int oxygen ){
   short errorCode = 30;
   char setOxygen = 10;
   short setPeep = 20;
@@ -126,22 +126,22 @@ void sendPacket( int fd, int* pressure, int* flow, int* tidal, int size, int oxy
 
   idx = write_char( oxygen, idx );
   for( unsigned i =0 ; i < size; i++ ) {
-    idx = write_int( pressure[i], idx );
+    idx = write_short( pressure[i], idx );
   }
   for( unsigned i =0 ; i < size; i++ ) {
-    idx = write_int( flow[i], idx );
+    idx = write_short( flow[i], idx );
   }
   for( unsigned i =0 ; i < size; i++ ) {
-    idx = write_int( tidal[i], idx );
+    idx = write_short( tidal[i], idx );
   }
 
   //adding a footer
-  msg[idx+0] = 0x55;
-  msg[idx+1] = 0xAA;
-  msg[idx+2] = 0x55;
-  msg[idx+3] = 0xAA;
+  msg[idx+0] = 0x5A;
+  msg[idx+1] = 0x5A;
+  msg[idx+2] = 0x5A;
+  msg[idx+3] = 0x5A;
   idx = idx + 4;
-  
+
   printf("%d\n", packet_count);
   /* for (int i = 0; i < idx; i ++) { */
   /*   if(i % 20 == 0 ) */
@@ -150,7 +150,7 @@ void sendPacket( int fd, int* pressure, int* flow, int* tidal, int size, int oxy
   /* } */
   /* printf("\n"); */
 
-  
+
   write(fd, msg, idx);
 
   //printf("%d", *(msg+4));
@@ -173,14 +173,14 @@ void main() {
   set_interface_attribs (fd, B9600 , 0);  // set speed to 115,200 bps, 8n1 (no parity)
   set_blocking (fd, 0);                // set no blocking
 
-  msg[0] = 0xAA;
-  msg[1] = 0x55;
-  msg[2] = 0xAA;
-  msg[3] = 0x55;
+  /* msg[0] = 0xAA; */
+  /* msg[1] = 0x55; */
+  /* msg[2] = 0xAA; */
+  /* msg[3] = 0x55; */
 
-  for( unsigned i = 4; i < 20; i++ ) {
-    msg[i] = 'a';
-  }
+  /* for( unsigned i = 4; i < 20; i++ ) { */
+  /*   msg[i] = 'a'; */
+  /* } */
 
 
   FILE *in_file  = fopen("./raw_data.txt", "r");
@@ -188,10 +188,11 @@ void main() {
      printf("oops, file can't be read\n");
      return;
    }
-  int pressure[10] = {10,10,20,10,30,10,10,20,10,30 };
-  int flow[10]  = {10,10,20,10,30,10,10,20,10,30 };
-  int tidal[10]  = {10,10,20,10,30,10,10,20,10,30 } ;
-  int oxygen = 45;
+
+  short pressure[20];
+  short flow[20];
+  short tidal[20];
+  short oxygen = 45;
 
   for(unsigned i = 0; i < 1000; i++ ) {
     for( unsigned j = 0; j < 20; j++ ) {
@@ -201,8 +202,8 @@ void main() {
         return;
       }
       if( j % 2 == 0 ) {
-        pressure[j>>1] = (p*100);
-        flow[j>>1] = (f*100);
+        pressure[j>>1] = (short)(p*100);
+        flow[j>>1] = (short)(f*100);
       }
     }
     sendPacket( fd, pressure, flow, tidal, 10, oxygen );
