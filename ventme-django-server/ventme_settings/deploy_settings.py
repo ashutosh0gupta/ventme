@@ -20,6 +20,6 @@ STATIC_ROOT = os.path.join(BASE_DIR,'static')
 
 
 MEDIA_URL = '/~internal/cs228/images/'
-MEDIA_ROOT = 'studenthome/images'
+MEDIA_ROOT = 'ventme/images'
 
 

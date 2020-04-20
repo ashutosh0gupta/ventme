@@ -6,10 +6,12 @@ from . import views
 
 urlpatterns = [
     path( '', views.index, name='index'),
-    path( 'call/', views.call, name='call'),
     path( 'all/', views.all_status, name='all'),
-    path( 'register/', views.register, name='register'),
-    path( 'vent/(?P<qid>\d+)/', views.vent, name='vent'),   
+    path( 'register/', views.register, name='register' ),
+    re_path( 'data/(?P<vid>\d+)/', views.data, name='data'),
+    re_path( 'vent/(?P<vid>\d+)/', views.vent, name='vent' ),
+    re_path( 'plot/(?P<vid>\d+)/', views.plot_data, name='plot'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
     

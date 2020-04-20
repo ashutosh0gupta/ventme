@@ -127,11 +127,7 @@ void sendPacket( int fd, short* pressure, short* flow, short* tidal, int size, i
   idx = write_char( oxygen, idx );
   for( unsigned i =0 ; i < size; i++ ) {
     idx = write_short( pressure[i], idx );
-  }
-  for( unsigned i =0 ; i < size; i++ ) {
     idx = write_short( flow[i], idx );
-  }
-  for( unsigned i =0 ; i < size; i++ ) {
     idx = write_short( tidal[i], idx );
   }
 
