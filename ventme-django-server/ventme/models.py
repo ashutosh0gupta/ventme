@@ -2,6 +2,7 @@ from django.db import models
 
 class Ventilator(models.Model):
     name=models.CharField(max_length=100)
+    location=models.CharField(max_length=100, null = True)
     registration_key = models.CharField(max_length=16, null = True)
     last_contact = models.DateTimeField(verbose_name="Last contact", null=True)
     is_registered = models.BooleanField(verbose_name="Is registered?", default=False)
@@ -18,7 +19,7 @@ class Ventilator(models.Model):
     # readings
     oxygen = models.IntegerField(verbose_name="Oxygen level(%)",    default=0 )
     is_error = models.BooleanField(verbose_name="Is error?", default=False)    
-    data = models.FileField(verbose_name="data dump file")
+    data = models.FileField(verbose_name="data dump file", null = True )
     
 class SystemState(models.Model):
     SYS_MODE = ( ( 'ACTIVE', 'SYSTEM IS ACTIVE'), ('INACTIVE','SYSTEM IS INACTIVE') )

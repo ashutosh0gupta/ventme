@@ -40,7 +40,10 @@ Note: every install must have a different secret key
   $python3 manage.py makemigrations
   $python3 manage.py migrate
   ```
-  
+  ```
+  $python3 manage.py createsuperuser
+  ```
+
   5. __Using the server__
 
   - Start server of the application
@@ -88,4 +91,18 @@ Ventilator protocol
 
   -- ventme_settings
   
-      replace "deploy-prefix" to the choosen deploy-prefix 
+      replace "deploy-prefix" to the choosen deploy-prefix
+
+# test
+curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
+
+
+
+# Django fixing
+
+from django.utils.deprecation import RemovedInDjango30Warning
+
+comment this line in below files
+
+~/.local/lib/python3.6/site-packages/django/contrib/admin/templatetags/admin_static.py
+~/.local/lib/python3.6/sitepackages/django/contrib/staticfiles/templatetags/staticfiles.py

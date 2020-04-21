@@ -11,13 +11,16 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView,FormVie
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 import logging
 
 import csv
+import string
 import os
 import shutil
-import datetime
+from datetime import datetime,timedelta,date
 import random
 import pylatexenc
 from pylatexenc.latex2text import LatexNodes2Text
@@ -39,15 +42,10 @@ def get_or_none(model, *args, **kwargs):
     except model.DoesNotExist:
         return None
 
-#----------------------------------------------------------------------------
-# VIEWS
+def get_sys_state():
+    s, created = SystemState.objects.get_or_create(pk = 1)
+    return s
 
-def index(request):
-    p = who_auth(request)
-    if p == None:
-        return redirect( reverse("logout") )
-    return redirect( reverse("all") )
-    
 def get_user_rollno( u ):
     if( u.ldap_user ):
         rollno = u.ldap_user.attrs['employeeNumber']
@@ -63,23 +61,105 @@ def who_auth(request):
         return None
     return "logged"
 
+#----------------------------------------------------------------------------
+# Global ram storage
 
+counter = 0
+
+#----------------------------------------------------------------------------
+# VIEWS
+
+def index(request):
+    p = who_auth(request)
+    if p == None:
+        return redirect( reverse("logout") )
+    return redirect( reverse("all") )
+
+def is_active( vent ):
+    if ( vent == None ):
+        log_vent.error( 'Attack on: '+str(vent.id) )
+        return False
+    if not vent.is_registered:
+        log_vent.error( 'Unregistered device contacting: '+str(vent.id) )
+        return False
+    return True
+
+def reset_vent( vent ):
+    vent.packet_count = 0
+    vent.sample_rate = 0
+    vent.set_oxygen = 0
+    vent.set_peep = 0
+    vent.set_rr = 0
+    vent.set_tidal_vol = 0
+    vent.set_ie_ratio = None
+    vent.oxygen = 0
+    is_error = False
+        
+def timeout_deregister( vent ):
+    past = timezone.now()-timedelta( seconds = 10 )
+    if vent.is_registered :
+        if past > vent.last_contact :
+            log_vent.error( 'Unregistered due to time gap: '+str(vent.id) )
+            vent.is_registered = False
+            vent.save()
+            return True
+    return False
+
+# noone need to clll it?
+# better soultion is not to display things that are too old
+#
+def timeout_delete( vent ):
+    past = timezone.now()-timedelta( hours = 24 )
+    if past > vent.last_contact :
+        log_vent.error( 'Device deleted due to time gap: '+str(vent.id) )
+        vent.delete()
+        return True
+    return False
+
+def dump_data( vent, data_line ):
+    if vent == None:
+        return
+    path = vent.data.name
+    try:
+        with open(path, "w+b") as f:
+            f.write( data_line )
+            f.close()
+            f.write('input')
+    except IOError as exc:
+        log_vent.error( 'Failed to open : '+ path )
+    
+@csrf_exempt
 def register(request):
-    if request.POST:
-        n = reqt.POST['name']
-        vent, created = StudentInfo.objects.get_or_create( name= n )
-        if vent.is_registered:
-            return HttpResponse( 'Already' )
-        vent.registration_key = random_string()
-        vent.is_registered = True
-        vent.last_contact = datetime.now()
-        if created:
-            reset_vent(vent)
-        vent.save()
-        return HttpResponse( str(vent.id) + ' ' + str(vent.registration_key) )
-    else:
-        return HttpResponse( 'Unregistered' )
+    if request.POST == None:
+        return HttpResponse( 'Unregistered' )        
+    print(request.POST)
+    n = request.POST['name']
+    vent, created = Ventilator.objects.get_or_create( name= n )
 
+    now = timezone.now()
+    if not created:
+        # check if it is time to register
+        timeout_deregister( vent )
+        dump_data( vent, "Register at: "+str(now) )
+    else:
+        path = join(settings.MEDIA_ROOT, 'files-', vent.name, '.txt')
+        vent.data.name = path
+        dump_data(vent,"Ventilator:"+vent.name+"\n Register at: "+str(now))
+        # put ventilator name in the file
+            
+    if vent.is_registered:
+        return HttpResponse( 'Already registered! Request ignored.' )
+
+    # reset/initialize the registration
+    vent.registration_key = random_string()
+    vent.is_registered = True
+    vent.last_contact = now
+    reset_vent(vent)
+    vent.location = request.POST['location']
+    vent.save()
+    return HttpResponse( str(vent.id) + ' ' + str(vent.registration_key) )
+
+@csrf_exempt
 def data( request, vid ) :
     if request.POST == None:
         return HttpResponse( 'Unregistered' )
@@ -87,20 +167,8 @@ def data( request, vid ) :
     key = request.POST['reg_key']
     vent = get_or_none(Ventilator, pk=vid)
 
-    # check if device if device active 
-    if ( vent == None or vent.registration_key != key ):
-        log_vent.error( 'Attack on: '+str(vid) )
-        return HttpResponse( 'Unregistered' )
-    if not vent.is_registered:
-        log_vent.error( 'Unregistered device contacting: '+str(vent.id) )
-        return HttpResponse( 'Unregistered' )
-
-    # check if there was a time
-    past = datetime.now()-timedelta( seconds = 10 )
-    if past > vent.last_contact:
-        log_vent.error( 'Unregistered due to time gap: '+str(vent.id) )
-        vent.is_registered = False
-        vent.save()
+    # check if device if device active and connection is valid
+    if ( not is_active( vent ) ) or vent.registration_key != key or timeout_deregister(vent):
         return HttpResponse( 'Unregistered' )
 
     #load data
@@ -113,10 +181,10 @@ def data( request, vid ) :
 
     vent.packet_count = packet_count
         
-        # reading value
+    # reading value
     vent.sample_rate  = int(request.POST[ 'sample_rate'  ])
     vent.num_samples  = int(request.POST[ 'num_samples'  ])
-    error        = request.POST[ 'error'        ]
+    error             = request.POST[ 'error'        ]
 
     vent.set_oxygen   = int(request.POST[ 'set_oxygen'   ])
     vent.set_peep     = int(request.POST[ 'set_peep'     ])
@@ -130,61 +198,51 @@ def data( request, vid ) :
     airflow      = request.POST[ 'airflow'      ]
     tidal_volume = request.POST[ 'tidal_vol'    ]
         
-    vent.last_contact = datetime.now()
+    vent.last_contact = timezone.now()
     vent.save()
     return HttpResponse( 'Registered' )    
 
 def all_status(request):
-    vents = Ventilator.objects()
+    vents = Ventilator.objects.all()
     sys = get_sys_state()
     context = RequestContext(request)
+
+    # check if anything to clear
+    for vent in vents:
+        timeout_deregister( vent )
+    
     context.push( {'vents': vents } )
     return render( request, 'ventme/all.html', context.flatten() )
+
+
+# only authorized users can reach to the following views
 
 def plot_data( request, vid ):
     u = who_auth(request)
     if u == None:
-        return JsonResponse( {} )
-    
+        return JsonResponse( {} )    
     vent = get_or_none(Ventilator, pk=vid)
-    if ( vent == None ):
-        log_vent.error( 'Attack on: '+str(vid) )
-        return HttpResponse( 'Unregistered' )
-    if not vent.is_registered:
-        log_vent.error( 'Unregistered device contacting: '+str(vent.id) )
-        return HttpResponse( 'Unregistered' )
 
-    # check if there was a time
-    past = datetime.now()-timedelta( seconds = 10 )
-    if past > vent.last_contact:
-        log_vent.error( 'Unregistered due to time gap: '+str(vent.id) )
-        vent.is_registered = False
-        vent.save()
-        return HttpResponse( 'Unregistered' )
+    # check if device if the device is active
+    if ( not is_active( vent ) ) or timeout_deregister(vent):
+        return JsonResponse( {} )
     
     return JsonResponse( response_data )
 
 def vent( request, vid ) :
     u = who_auth(request)
     if u == None:
-        return HttpResponse( 'Incorrect login!' )
-    
+        return HttpResponse( 'Incorrect login!' )    
     vent = get_or_none(Ventilator, pk=vid)
-    if ( vent == None ):
-        log_vent.error( 'Attack on: '+str(vid) )
-        return HttpResponse( 'Unregistered' )
-    if not vent.is_registered:
-        log_vent.error( 'Unregistered device contacting: '+str(vent.id) )
+
+    # check if device if the device is active
+    if ( not is_active( vent ) ) or timeout_deregister(vent):
         return HttpResponse( 'Unregistered' )
 
     # check if there was a time
-    past = datetime.now()-timedelta( seconds = 10 )
-    if past > vent.last_contact:
-        log_vent.error( 'Unregistered due to time gap: '+str(vent.id) )
-        vent.is_registered = False
-        vent.save()
+    if timeout_deregister( vent ):
         return HttpResponse( 'Unregistered' )
-
+    
     context = RequestContext(request)
     context.push( {'vent': vent, 'data': data[vent.id] } )
     return render( request, 'ventme/display.html', context.flatten() )
