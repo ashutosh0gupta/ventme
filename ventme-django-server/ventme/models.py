@@ -17,9 +17,12 @@ class Ventilator(models.Model):
     set_ie_ratio = models.CharField(verbose_name="Set IE Ratio", max_length=5, null = True )
 
     # readings
-    oxygen = models.IntegerField(verbose_name="Oxygen level(%)",    default=0 )
-    is_error = models.BooleanField(verbose_name="Is error?", default=False)    
-    data = models.FileField(verbose_name="data dump file", null = True )
+    oxygen     = models.IntegerField(verbose_name="Oxygen level(%)",    default=0 )
+    rr_error       = models.BooleanField(verbose_name="Respiration out of bounds", default=False)
+    peep_error     = models.BooleanField(verbose_name="PEEP out of bounds"       , default=False)    
+    oxygen_error   = models.BooleanField(verbose_name="Oxygen out of bounds"     , default=False)    
+    ie_ratio_error = models.BooleanField(verbose_name="IE ratio out of bounds"   , default=False)    
+    data       = models.FileField(verbose_name="data dump file", null = True )
     
 class SystemState(models.Model):
     SYS_MODE = ( ( 'ACTIVE', 'SYSTEM IS ACTIVE'), ('INACTIVE','SYSTEM IS INACTIVE') )

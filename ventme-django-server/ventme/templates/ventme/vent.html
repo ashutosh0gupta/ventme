@@ -9,11 +9,23 @@
 
 {% block content %}
 
-<h2>{{vent.name}} at {{vent.location}}</h2>
+<h2>{{vent.name}} at {{vent.location}} <a href="{% url 'index' %}">[Dashboard]</a></h2>
 
-  <div id="container" style="width: 75%;">
-    <canvas id="population-chart" data-url="{% url 'population-chart' %}"></canvas>
-  </div>
+<div id="container" style="width: 90%;">
+    <span id="rr" style="font-size:30px;">--</span>RR(pm)
+    <span id="peep" style="font-size:30px;">--</span>peep(H2Ocm)
+    <span id="oxygen" style="font-size:30px;">--</span>Oxygen(%)
+    <span id="ieratio" style="font-size:30px;">--</span>I:E
+    
+    <canvas id="pressure-plot" data-url="{% url 'plot' vent.id %}"></canvas>
+    <canvas id="airflow-plot"></canvas>
+    <canvas id="tidalvol-plot"></canvas>
+    Set values:
+    <span id="setrr" style="font-size:30px;">--</span>RR(pm)
+    <span id="setpeep" style="font-size:30px;">--</span>peep(H2Ocm)
+    <span id="setoxygen" style="font-size:30px;">--</span>Oxygen(%)
+    <span id="setieratio" style="font-size:30px;">--</span>I:E
+</div>
 
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
@@ -21,43 +33,195 @@
   <script>
 
     $(function () {
+      xLables = []
+      airData = []
+      pressData = []
+      volData = []
+      for ( i = 0 ; i < {{num_samples}}; i ++ ) {
+        xLables.push(i);
+        airData.push(0);
+        pressData.push(0);
+        volData.push(0);
+      }    
 
-      var $populationChart = $("#population-chart");
-      $.ajax({
-        url: $populationChart.data("url"),
-        success: function (data) {
-
-          var ctx = $populationChart[0].getContext("2d");
-
-          new Chart(ctx, {
-            type: 'bar',
+      var $pressureChart = $( "#pressure-plot" );
+      var pressureCtx = $pressureChart[0].getContext("2d");
+      var pChart = new Chart(pressureCtx, {
+            type: 'line',
             data: {
-              labels: data.labels,
+              labels: xLables,
               datasets: [{
-                label: 'Population',
-                backgroundColor: 'blue',
-                data: data.data
-              }]          
+                borderColor: 'blue', data: pressData, fill: false,
+                pointRadius: 0, lineTension:0,
+              }]
             },
             options: {
               responsive: true,
-              legend: {
-                position: 'top',
-              },
-              title: {
-                display: true,
-                text: 'Population Bar Chart'
-              }
+              aspectRatio: 5,
+              animation: false,
+              legend: { display: false, },
+              title: { display: true, text: 'Pressure (H2Ocm)' },
+              scales: {
+                 xAxes: [{ display: false, scaleLabel: { display: false } }],
+                 yAxes: [{ display: true,
+                           scaleLabel: { labelString: 'Pressure (H2Ocm)' },
+                           ticks: {suggestedMin: -1,suggestedMax: 6,} }]
+	      }
             }
-          });
-
-        }
       });
+                        
+      var $airflowChart  = $( "#airflow-plot"  );
+      var airflowCtx = $airflowChart[0].getContext("2d");
+      var airConfig = {
+            type: 'line',
+            data: {
+              labels: xLables,
+              datasets: [{
+                borderColor: 'blue', data: airData, fill: false,
+                pointRadius: 0, lineTension:0,
+              }]
+            },
+            options: {
+              responsive: true,
+              aspectRatio: 5,
+              animation: false,
+              legend: { display: false, },
+              title: { display: true, text: 'Airflow (lpm)' },
+              scales: {
+                 xAxes: [{ display: false, scaleLabel: { display: false } }],
+                 yAxes: [{ display: true,
+                           ticks: {suggestedMin: -1,suggestedMax: 6,} }]
+	      }
+            }
+         }
+      var aChart = new Chart(airflowCtx, airConfig );
 
+      var $tidalVolChart = $( "#tidalvol-plot" );
+      var tidalVolCtx = $tidalVolChart[0].getContext("2d");
+      var tidalVolConfig = {
+            type: 'line',
+            data: {
+              labels: xLables,
+              datasets: [{
+                borderColor: 'blue', data: volData, fill: false,
+                pointRadius: 0, lineTension:0,
+              }]
+            },
+            options: {
+              responsive: true,
+              aspectRatio: 5,
+              animation: false,
+              legend: { display: false, },
+              title: { display: true, text: 'Tidal Volume (ml)' },
+              scales: {
+                 xAxes: [{ display: false, scaleLabel: { display: false } }],
+                 yAxes: [{ display: true,
+                           ticks: {suggestedMin: -50,suggestedMax: 500,} }]
+	      }
+            }
+         }
+      var tChart = new Chart(tidalVolCtx, tidalVolConfig );
+
+     function getData() {                  
+      $.ajax({
+        url: $pressureChart.data("url"),
+         success: function (data) {
+         if( data.rr ) {
+            var rr = data.rr;
+         }else{
+            var rr = "--";
+         }
+         if( data.peep ) {
+            var peep = data.peep;
+         }else{
+            var peep = "--";
+         }
+         if( data.oxygen ) {
+            var oxygen = data.oxygen;
+         }else{
+            var oxygen = "--";
+         }
+         if( data.ieRatio ) {
+            var ieRatio = data.ieRatio;
+         }else{
+            var ieRatio = "--";
+         }
+                        
+         document.getElementById("rr").innerHTML = rr         
+         document.getElementById("peep").innerHTML = peep
+         document.getElementById("oxygen").innerHTML = oxygen
+         document.getElementById("ieratio").innerHTML = ieRatio
+
+         if( data.setRR ) {
+            var setRR = data.setRR;
+         }else{
+            var setRR = "--";
+         }
+         if( data.setPEEP ) {
+            var setPEEP = data.setPEEP;
+         }else{
+            var setPEEP = "--";
+         }
+         if( data.setOxygen ) {
+            var setOxygen = data.setOxygen;
+         }else{
+            var setOxygen = "--";
+         }
+         if( data.setIERatio ) {
+            var setIERatio = data.setIERatio;
+         }else{
+            var setIERatio = "--";
+         }
+                        
+         document.getElementById("setrr").innerHTML = setRR
+         document.getElementById("setpeep").innerHTML = setPEEP
+         document.getElementById("setoxygen").innerHTML = setOxygen
+         document.getElementById("setieratio").innerHTML = setIERatio
+
+         if( data.rrError ){
+             document.getElementById("rr").style.color = "red";
+         }else{
+             document.getElementById("rr").style.color = "black";
+         }
+
+         if( data.peepError ){
+             document.getElementById("peep").style.color = "red";
+         }else{
+             document.getElementById("peep").style.color = "black";
+         }
+         if( data.oxygenError ){
+             document.getElementById("oxygen").style.color = "red";
+         }else{
+             document.getElementById("oxygen").style.color = "black";
+         }
+         if( data.ieRatioError ){
+             document.getElementById("ieratio").style.color = "red";
+         }else{
+             document.getElementById("ieratio").style.color = "black";
+         }
+                        
+         for( i=0; i < {{num_samples}}; i ++ ){
+            pressData[i] = data.pressureData[i];
+         }
+         pChart.update();
+                        
+         for( i=0; i < {{num_samples}}; i ++ ){
+            airData[i] = data.airflowData[i];
+         }
+         aChart.update();
+         for( i=0; i < {{num_samples}}; i ++ ){
+            volData[i] = data.tidalVolData[i];
+         }
+         tChart.update();
+       },
+       error: function() {
+          alert("Error in data!");
+       }
+      });
+      };
+      setInterval( getData, 1000);
     });
 
   </script>
   
-Auto refresh in every second.
-
 {% endblock %}
