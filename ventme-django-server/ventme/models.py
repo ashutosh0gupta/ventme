@@ -1,5 +1,9 @@
 from django.db import models
 
+# from django_memdb.mixins import InMemoryDB, PeristentInMemoryDB
+# class Pressuredata(models.Model, InMemoryDB):
+#     text = models.TextField()
+
 class Ventilator(models.Model):
     name=models.CharField(max_length=100)
     location=models.CharField(max_length=100, null = True)
@@ -19,9 +23,9 @@ class Ventilator(models.Model):
     # readings
     oxygen     = models.IntegerField(verbose_name="Oxygen level(%)",    default=0 )
     rr_error       = models.BooleanField(verbose_name="Respiration out of bounds", default=False)
-    peep_error     = models.BooleanField(verbose_name="PEEP out of bounds"       , default=False)    
-    oxygen_error   = models.BooleanField(verbose_name="Oxygen out of bounds"     , default=False)    
-    ie_ratio_error = models.BooleanField(verbose_name="IE ratio out of bounds"   , default=False)    
+    peep_error     = models.BooleanField(verbose_name="PEEP out of bounds" , default=False)    
+    oxygen_error   = models.BooleanField(verbose_name="Oxygen out of bounds" , default=False)    
+    ie_ratio_error = models.BooleanField(verbose_name="IE ratio out of bounds", default=False)    
     data       = models.FileField(verbose_name="data dump file", null = True )
     
 class SystemState(models.Model):

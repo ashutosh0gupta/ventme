@@ -96,6 +96,8 @@ Ventilator protocol
 # test
 curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
 
+curl -i -X POST --data "reg_key=nrptfrnmwsbahnwp&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/5/
+
 
 
 # Django fixing

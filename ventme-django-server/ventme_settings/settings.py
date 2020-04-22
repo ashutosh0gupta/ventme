@@ -83,6 +83,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ventme_settings.wsgi.application'
 
 
+
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
@@ -197,3 +198,6 @@ else:
     MEDIA_URL = '/images/'
     MEDIA_ROOT = 'ventme/images'
 
+# # including memdb
+# import django_integrator
+# django_integrator.add_application( 'django_memdb')

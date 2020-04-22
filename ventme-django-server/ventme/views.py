@@ -63,9 +63,51 @@ def who_auth(request):
 
 #----------------------------------------------------------------------------
 # Global ram storage
+# -- I hope no concurrency issues
 
-counter = 0
+num_display_samples = 100
+counters = dict()
+pressureData = dict()
+airflowData = dict()
+volumeData = dict()
 
+# derived data
+rrs = dict()
+peeps = dict()
+ieratio = dict()
+
+def get_display_data(vid):
+    pData   = pressureData[vid]
+    aData   = airflowData[vid]
+    tData   = volumeData[vid]
+    return pData,aData,tData
+    
+def put_packet( vid, pressure, airflow, volume ):
+    global counters, pressureData, airflowData, volumeData
+    counter = counters[vid]
+    pData   = pressureData[vid]
+    aData   = airflowData[vid]
+    tData   = volumeData[vid]
+    for idx in range( 0,len(pressure) ):
+        pData[counter] = pressure[idx]
+        aData[counter] = airflow[idx]
+        tData[counter] = volume[idx]
+        counter = (counter + 1) % num_display_samples
+    pData[counter] = None
+    aData[counter] = None
+    tData[counter] = None
+    counters[vid] = counter
+    
+def initialize_data( vid ):
+    global counters, pressureData, airflowData, volumeData
+    counters[vid] = 0
+    pressureData[vid] = [0]*num_display_samples
+    airflowData[vid]  = [0]*num_display_samples
+    volumeData[vid]   = [0]*num_display_samples
+    rrs[vid] = 0
+    peeps[vid] = 0
+    ieratio[vid] = 0
+    
 #----------------------------------------------------------------------------
 # VIEWS
 
@@ -77,7 +119,7 @@ def index(request):
 
 def is_active( vent ):
     if ( vent == None ):
-        log_vent.error( 'Attack on: '+str(vent.id) )
+        log_vent.error( 'Attack!' )
         return False
     if not vent.is_registered:
         log_vent.error( 'Unregistered device contacting: '+str(vent.id) )
@@ -102,9 +144,10 @@ def reset_vent( vent ):
     vent.peep_error = False
     vent.oxygen_error = False
     vent.ie_ratio_error = False
-        
+    initialize_data(vent.id)
+    
 def timeout_deregister( vent ):
-    past = timezone.now()-timedelta( seconds = 400 )
+    past = timezone.now()-timedelta( seconds = 10 )
     if vent.is_registered :
         if past > vent.last_contact :
             log_vent.error( 'Unregistered due to time gap: '+str(vent.id) )
@@ -129,17 +172,16 @@ def dump_data( vent, data_line ):
         return
     path = vent.data.name
     try:
-        with open(path, "w+b") as f:
-            f.write( data_line )
+        with open(path, "a+") as f:
+            f.write( data_line + "\n" )
             f.close()
-            f.write('input')
     except IOError as exc:
         log_vent.error( 'Failed to open : '+ path )
     
 @csrf_exempt
 def register(request):
     if request.POST == None:
-        return HttpResponse( 'Unregistered' )        
+        return HttpResponse( 'BadFormat' )
     # print(request.POST)
     try:
         n = request.POST['name']
@@ -155,13 +197,13 @@ def register(request):
         timeout_deregister( vent )
         dump_data( vent, "Register at: "+str(now) )
     else:
-        path = join(settings.MEDIA_ROOT, 'files-', vent.name, '.txt')
+        path = "".join([settings.MEDIA_ROOT, '/files-', vent.name, '.txt'])
         vent.data.name = path
-        dump_data(vent,"Ventilator:"+vent.name+"\n Register at: "+str(now))
+        dump_data( vent,"Ventilator:"+vent.name+"\nRegister at: "+str(now) )
         # put ventilator name in the file
             
     if vent.is_registered:
-        return HttpResponse( 'Already registered! Request ignored.' )
+        return HttpResponse( 'Already' )
 
     # reset/initialize the registration
     vent.registration_key = random_string()
@@ -177,11 +219,13 @@ def data( request, vid ) :
     if request.POST == None:
         return HttpResponse( 'Unregistered' )
     try:
+        # print(request.POST)
         key = request.POST['reg_key']
-        vent = get_or_none(Ventilator, pk=vid)
+        vent = get_or_none(Ventilator, id=vid)
 
         # check if device if device active and connection is valid
         if ( not is_active( vent ) ) or vent.registration_key != key :
+            log_vent.error( 'Bad post received : ' + vid )
             return HttpResponse( 'BadFormat' )
             
         if timeout_deregister(vent):
@@ -189,37 +233,41 @@ def data( request, vid ) :
 
         packet_count = int(request.POST[ 'packet_count' ])
         if packet_count != (vent.packet_count + 1) % 32768:
-            log_vent.error( 'Unregistered due to packet drop: '+str(p.id) )
-            vent.is_registered = False
+            log_vent.error( 'Unregistered due to packet drop: '+str(vid) )
+            vent.packet_count = packet_count
             vent.save()
-            return HttpResponse( 'BadFormat' )
+            return HttpResponse( 'Dropped' )
 
         vent.packet_count = packet_count        
         vent.sample_rate  = int(request.POST[ 'sample_rate'  ])
         vent.num_samples  = int(request.POST[ 'num_samples'  ])
-        vent.rr_error       = bool(request.POST[ 'rr_error'      ])
-        vent.peep_error     = bool(request.POST[ 'peep_error'    ])
-        vent.oxygen_error   = bool(request.POST[ 'oxygen_error'  ])
-        vent.ie_ratio_error = bool(request.POST[ 'ie_ratio_error'])
+
+        vent.rr_error       = (request.POST[ 'rr_error'      ] == 'True')
+        vent.peep_error     = (request.POST[ 'peep_error'    ] == 'True')
+        vent.oxygen_error   = (request.POST[ 'oxygen_error'  ] == 'True')
+        vent.ie_ratio_error = (request.POST[ 'ie_ratio_error'] == 'True')
 
         vent.set_oxygen   = int(request.POST[ 'set_oxygen'   ])
         vent.set_peep     = int(request.POST[ 'set_peep'     ])
         vent.set_rr       = int(request.POST[ 'set_rr'       ])
         vent.set_tidal_vol= int(request.POST[ 'set_tidal_vol'])
-        vent.set_ie_ratio = int(request.POST[ 'set_ie_ratio' ])
+        vent.set_ie_ratio = request.POST[ 'set_ie_ratio' ]
 
         vent.oxygen       = int(request.POST[ 'oxygen'       ])
         # process ints
         pressure     = request.POST[ 'pressure'     ]
         airflow      = request.POST[ 'airflow'      ]
-        tidal_volume = request.POST[ 'tidal_vol'    ]
+        tidal_volume = request.POST[ 'tidal_volume'    ]
+        pressure = [float(x) for x in pressure.split(',')]
+        airflow = [float(x) for x in airflow.split(',')]
+        volume = [float(x) for x in tidal_volume.split(',')]
 
-        dump_data( vent, request.POST )
-        
     except Exception as e:
-        log_vent.error( 'Bad post received : '+str(p.id) )
+        log_vent.error( 'Bad post received : '+ str(e) + vid )
         return HttpResponse( 'BadFormat' )
-    
+
+    put_packet( vent.id, pressure, airflow, volume )       
+    dump_data( vent, str(request.POST) )
     vent.last_contact = timezone.now()
     vent.save()
     return HttpResponse( 'Registered' )    
@@ -246,36 +294,37 @@ def plot_data( request, vid ):
     vent = get_or_none(Ventilator, pk=vid)
 
     # check if device if the device is active
-    if ( not is_active( vent ) ) or timeout_deregister(vent):
-        return JsonResponse( {} )
+    # if ( not is_active( vent ) ) or timeout_deregister(vent):
+    #     return JsonResponse( {} )
 
-    pressure_data = []
-    airflow_data = []
-    tidal_vol_data = []
-    for i in range(0,100):
-        pressure_data.append( random.randint(0,600)/100 )
-        airflow_data.append( random.randint(0,600)/100 )
-        tidal_vol_data.append( random.randint(0,300) )
+    # pressure_data = []
+    # airflow_data = []
+    # tidal_vol_data = []
 
+    # for i in range(0,num_display_samples):
+    #     pressure_data.append( random.randint(0,600)/100 )
+    #     airflow_data.append( random.randint(0,600)/100 )
+    #     tidal_vol_data.append( random.randint(0,300) )
+
+    pressure_data, airflow_data, tidal_vol_data = get_display_data(vent.id)
+
+    # derived data
     rr = random.randint(6,20)
     peep = random.randint(0,500)/100
-    oxygen = random.randint(0,100)
     ie_ratio = "2:1"
 
-    set_rr = random.randint(6,20)
-    set_peep = random.randint(0,500)/100
-    set_oxygen = random.randint(0,100)
-    set_ie_ratio = "2:1"
+    # data from objects
+    oxygen = vent.oxygen
+    set_rr = vent.set_rr
+    set_peep = vent.set_peep
+    set_oxygen = vent.set_oxygen
+    set_ie_ratio = vent.set_ie_ratio
 
-    rr_error = True
-    peep_error = False
-    oxygen_error = True
-    ie_ratio_error = False
+    rr_error = vent.rr_error 
+    peep_error = vent.peep_error
+    oxygen_error = vent.oxygen_error
+    ie_ratio_error = vent.ie_ratio_error
     
-    # labels = ['a','b','c']
-    # data = [4,6,3]
-    # print(labels)
-    print('DataQuery!!')
     
     return JsonResponse( data={ 'rr' : rr,
                                 'peep' : peep,
@@ -311,6 +360,6 @@ def vent( request, vid ) :
         return HttpResponse( 'Unregistered' )
     
     context = RequestContext(request)
-    context.push( { 'vent': vent, 'num_samples' : 100 } )
+    context.push( { 'vent': vent, 'num_samples' : num_display_samples } )
     return render( request, 'ventme/vent.html', context.flatten() )
     
