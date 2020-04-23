@@ -64,49 +64,144 @@ def who_auth(request):
 #----------------------------------------------------------------------------
 # Global ram storage
 # -- I hope no concurrency issues
+# -- turn the following into classes
 
-num_display_samples = 100
+num_display_samples = 2000
+num_maxmin_samples = 8
 counters = dict()
 pressureData = dict()
+pressureLowPassData = dict()
+diffPressureData = dict()
 airflowData = dict()
 volumeData = dict()
+maxminCounter = dict()
+maxminData = dict()
 
 # derived data
 rrs = dict()
 peeps = dict()
-ieratio = dict()
+ieratios = dict()
 
 def get_display_data(vid):
     pData   = pressureData[vid]
     aData   = airflowData[vid]
-    tData   = volumeData[vid]
-    return pData,aData,tData
-    
-def put_packet( vid, pressure, airflow, volume ):
+    #tData   = volumeData[vid]
+    #tData = pressureLowPassData[vid]
+    tData = diffPressureData[vid]
+    rr = rrs[vid]
+    ieratio = ieratios[vid]
+    return pData,aData,tData,rr,ieratio
+
+def compute_rr_ie( mmData, sample_rate ):
+    # minima points are stored as negative numbers
+    # and maxima points are stored as positive numbers
+    lambdas = []
+    ratios = []
+    last_inhale = None
+    last_exhale = None
+    isMin = True
+    if( mmData[0] < 0 ):
+       isMin = False
+    for i in range(1,num_maxmin_samples):
+        assert( isMin == (mmData[i] < 0) )
+        diff = mmData[i]+mmData[i-1]        
+        if isMin:
+            diff = -diff
+        diff = diff % num_display_samples
+        if isMin:
+            last_exhale = diff
+        else:
+            last_inhale = diff
+        if last_inhale != None and last_exhale != None and isMin:
+            lambdas.append(last_inhale+last_exhale)
+            ratios.append( last_inhale/last_exhale )
+        isMin = not isMin
+    avg_lambdas = sum(lambdas) / len(lambdas)
+    avg_ratios = sum(ratios) / len(ratios)
+    flipped = False
+    if avg_ratios < 1:
+        avg_ratios = 1/avg_ratios
+        flipped = True
+    ratio_str = None
+    for i in range(1,4):
+        if  i*0.8 < avg_ratios and avg_ratios < i*1.2:
+            ratio_str = str(i)
+    if ratio_str:
+        if flipped :
+            ratio_str = ratio_str + ':1'
+        else:
+            ratio_str = '1:' + ratio_str
+    else:
+        ratio_str = "-:-"
+    return int(60*sample_rate/avg_lambdas),ratio_str
+
+        
+def put_packet( vid, pressure, airflow, volume, sample_rate ):
+    lp = 0.98
     global counters, pressureData, airflowData, volumeData
+    global pressureLowPassData
+
     counter = counters[vid]
     pData   = pressureData[vid]
+    lpData  = pressureLowPassData[vid]
+    dData  =  diffPressureData[vid]
     aData   = airflowData[vid]
     tData   = volumeData[vid]
+    mmData  = maxminData[vid]
+    mmCnt = maxminCounter[vid]
+    rr = None
+    ie = None
+
+    pctr = (counter-1)% num_display_samples
     for idx in range( 0,len(pressure) ):
         pData[counter] = pressure[idx]
         aData[counter] = airflow[idx]
         tData[counter] = volume[idx]
+
+        # lowpass, differntiate, and zero-crossing
+        lpData[counter]=lp*lpData[pctr]+(1-lp)*pressure[idx]
+        #lpData[counter]=lp*lpData[pctr]+(1-lp)*airflow[idx]
+        dData[counter]=lpData[counter]-lpData[pctr]
+        if( dData[counter] >= 0 and dData[pctr] < 0 ):
+            # found a maxmia
+            mmData[mmCnt] = counter + 1
+            if mmCnt == num_maxmin_samples -1:
+                rr,ie = compute_rr_ie( mmData, sample_rate )
+            mmCnt = (mmCnt + 1) % num_maxmin_samples
+        if( dData[counter] < 0 and dData[pctr] >= 0 ):
+            # found a minima
+            mmData[mmCnt] = -(counter + 1)
+            if mmCnt == num_maxmin_samples -1:
+                rr, ie = compute_rr_ie( mmData, sample_rate )
+            mmCnt = (mmCnt + 1) % num_maxmin_samples
+            
+        pctr = counter
         counter = (counter + 1) % num_display_samples
+        
     pData[counter] = None
     aData[counter] = None
     tData[counter] = None
+    lpData[counter] = None
+    dData[counter] = None
     counters[vid] = counter
+    maxminCounter[vid] = mmCnt
+    if rr: rrs[vid] = rr
+    if ie: ieratios[vid] = ie
     
 def initialize_data( vid ):
     global counters, pressureData, airflowData, volumeData
+    global pressureLowPassData
     counters[vid] = 0
     pressureData[vid] = [0]*num_display_samples
+    pressureLowPassData[vid] = [0]*num_display_samples
+    diffPressureData[vid] = [0]*num_display_samples
     airflowData[vid]  = [0]*num_display_samples
     volumeData[vid]   = [0]*num_display_samples
-    rrs[vid] = 0
-    peeps[vid] = 0
-    ieratio[vid] = 0
+    rrs[vid] = None
+    peeps[vid] = None
+    ieratios[vid] = None
+    maxminCounter[vid] = 0
+    maxminData[vid] = [0]*num_maxmin_samples
     
 #----------------------------------------------------------------------------
 # VIEWS
@@ -266,7 +361,7 @@ def data( request, vid ) :
         log_vent.error( 'Bad post received : '+ str(e) + vid )
         return HttpResponse( 'BadFormat' )
 
-    put_packet( vent.id, pressure, airflow, volume )       
+    put_packet( vent.id, pressure, airflow, volume, vent.sample_rate )       
     dump_data( vent, str(request.POST) )
     vent.last_contact = timezone.now()
     vent.save()
@@ -293,7 +388,7 @@ def plot_data( request, vid ):
     #     return JsonResponse( {} )    
     vent = get_or_none(Ventilator, pk=vid)
 
-    # check if device if the device is active
+    # # check if device if the device is active
     # if ( not is_active( vent ) ) or timeout_deregister(vent):
     #     return JsonResponse( {} )
 
@@ -306,12 +401,12 @@ def plot_data( request, vid ):
     #     airflow_data.append( random.randint(0,600)/100 )
     #     tidal_vol_data.append( random.randint(0,300) )
 
-    pressure_data, airflow_data, tidal_vol_data = get_display_data(vent.id)
+    pressure_data, airflow_data, tidal_vol_data, rr, ie_ratio = get_display_data(vent.id)
 
     # derived data
-    rr = random.randint(6,20)
+    # if rr == None: rr = "--"
+    # if ie_ratio == None: ie_ratio = "-:-"    
     peep = random.randint(0,500)/100
-    ie_ratio = "2:1"
 
     # data from objects
     oxygen = vent.oxygen

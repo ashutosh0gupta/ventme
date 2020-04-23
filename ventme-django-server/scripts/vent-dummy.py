@@ -1,5 +1,10 @@
+#!/usr/bin/python3
+
 import requests
 import time
+
+f = open('../../testing/raw_data.txt', "r")
+
 
 website="http://localhost:8000/"
 
@@ -22,12 +27,23 @@ key = replies[1]
 
 data_url = website+"data/" + str(dev_id) + "/"
 
+sample_size = 20
+pressure = [ 0 for x in range(0,sample_size)]
+airflow = [ 0 for x in range(0,sample_size)]
+tidal = [ 0 for x in range(0,sample_size)]
 
-for idx in range(1,60):
-    sample_size = 19
-    pressure = [ x/10 for x in range(0,sample_size)]
-    airflow = [ x/10 for x in range(0,sample_size)]
-    tidal = [ x*x for x in range(0,sample_size)]
+for idx in range(1,150):
+
+    for j in range(0,sample_size):
+        line = f.readline()
+        if line:
+            splt = line.split()
+        else:
+            exit()
+        pressure[j] = float(splt[0])
+        airflow[j] = float(splt[1])
+        tidal[j] = j*j
+    
     
     d = {
         'reg_key':key,
@@ -51,5 +67,7 @@ for idx in range(1,60):
     reply = requests.post( data_url, data = d )
     print(reply.text)
     if not reply.text in ['Registered','Dropped']:
-        exit()
-    time.sleep(1)
+        break
+    time.sleep(0.2)
+
+f.close()
