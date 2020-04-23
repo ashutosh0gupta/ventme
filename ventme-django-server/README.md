@@ -47,7 +47,7 @@ Note: every install must have a different secret key
   $python3 manage.py createsuperuser
   ```
 
-  5. __Using the server__
+  # __Using the server__
 
   - Start server 
 
@@ -70,7 +70,7 @@ Note: every install must have a different secret key
    ```
   - Refesh http://localhost:8000/8000 
 
-  6. __Ventilator protocol__
+  # __Ventilator protocol__
 
   - _View_
   
