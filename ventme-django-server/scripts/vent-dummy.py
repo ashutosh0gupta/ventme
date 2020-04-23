@@ -3,7 +3,7 @@
 import requests
 import time
 
-f = open('./raw_data.txt', "r")
+f = open('./scripts/raw_data.txt', "r")
 
 
 website="http://localhost:8000/"
@@ -66,7 +66,7 @@ for idx in range(1,150):
     }
     reply = requests.post( data_url, data = d )
     print(reply.text)
-    if not reply.text in ['Registered','Dropped']:
+    if not reply.text in ['Success','Dropped']:
         break
     time.sleep(0.2)
 

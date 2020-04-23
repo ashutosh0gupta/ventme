@@ -21,12 +21,14 @@ For taking random attendance in the class
   -- the above list may not be exhaustive (let us know the missing dependencies)
 
  3.  Create file ./ventme_settings/.env containing the following key/values
- 
+
+```
 SECRET_KEY="<django-secret-key>"
 AUTH_LDAP_SERVER_URI="<ldap-server-for-account-management>"
 EMAIL_HOST="smtp.<your-smtp-server>"
 EMAIL_HOST_USER="<user-on-smtp-server>"
 EMAIL_HOST_PASSWORD="<password-of-the-user>"
+```
 
 * Use the following shell command to generate a random django-secret-key key
 
@@ -63,23 +65,24 @@ Note: every install must have a different secret key
     Login should take you to http://localhost:8000/all
 
   - Run the following dummy ventilator
-    ```
+   ```
    ./scripts/vent-dummy.py
    ```
   - Refesh http://localhost:8000/8000 
 
-Ventilator protocol
+  6. __Ventilator protocol__
 
-   View
-   ----
+  - _View_
+  
      http://127.0.0.1:8000/all 
       View all ventilators
       
      http://127.0.0.1:8000/vent/<id>
       View plots of ventilator <id>
 
-    Ventilator 
-    ----------
+  - _communcation with ventilators_
+
+   ```
      http://127.0.0.1:8000/register/
        post { 'name': '<unqiue-name>','location' : '<location of ventilator>' }
        reponses  "<id> <16char-key>"
@@ -106,7 +109,11 @@ Ventilator protocol
         'oxygen_error': <OXYGEN error: ['True','False']>,
         'ie_ratio_error':<IE ratio error: ['True','False']>
          }
-
+      reponses  "Unregistered" -- Device is disconnected from the server 
+                "BadFormat"    -- in case post is not in compliance
+                "Dropped"      -- If a packet drop detected
+                "Success"      -- If packet received successfully
+   ```
 
 
 # deploy modifications
@@ -119,10 +126,11 @@ Ventilator protocol
 
 #
 
+
 # Quick tests to communicate with the server
 curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
 
-curl -i -X POST --data "reg_key=nrptfrnmwsbahnwp&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/5/
+curl -i -X POST --data "reg_key=<key>&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/<id>/
 
 
 # Other notes for development

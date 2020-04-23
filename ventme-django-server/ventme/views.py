@@ -90,7 +90,8 @@ def get_display_data(vid):
     tData = diffPressureData[vid]
     rr = rrs[vid]
     ieratio = ieratios[vid]
-    return pData,aData,tData,rr,ieratio
+    peep = peeps[vid]
+    return pData,aData,tData,rr,ieratio,peep
 
 def compute_rr_ie( mmData, sample_rate ):
     # minima points are stored as negative numbers
@@ -151,14 +152,15 @@ def put_packet( vid, pressure, airflow, volume, sample_rate ):
     mmCnt = maxminCounter[vid]
     rr = None
     ie = None
-
+    peep = None
+    
     pctr = (counter-1)% num_display_samples
     for idx in range( 0,len(pressure) ):
         pData[counter] = pressure[idx]
         aData[counter] = airflow[idx]
         tData[counter] = volume[idx]
 
-        # lowpass, differntiate, and zero-crossing
+        # lowpass, differentiate, and zero-crossing
         lpData[counter]=lp*lpData[pctr]+(1-lp)*pressure[idx]
         #lpData[counter]=lp*lpData[pctr]+(1-lp)*airflow[idx]
         dData[counter]=lpData[counter]-lpData[pctr]
@@ -177,6 +179,9 @@ def put_packet( vid, pressure, airflow, volume, sample_rate ):
             
         pctr = counter
         counter = (counter + 1) % num_display_samples
+
+    if counter >= num_display_samples - len(pressure) :
+        peep = min(pData)
         
     pData[counter] = None
     aData[counter] = None
@@ -187,6 +192,7 @@ def put_packet( vid, pressure, airflow, volume, sample_rate ):
     maxminCounter[vid] = mmCnt
     if rr: rrs[vid] = rr
     if ie: ieratios[vid] = ie
+    if peep: peeps[vid] = peep
     
 def initialize_data( vid ):
     global counters, pressureData, airflowData, volumeData
@@ -312,7 +318,7 @@ def register(request):
 @csrf_exempt
 def data( request, vid ) :
     if request.POST == None:
-        return HttpResponse( 'Unregistered' )
+        return HttpResponse( 'BadFormat' )
     try:
         # print(request.POST)
         key = request.POST['reg_key']
@@ -365,7 +371,7 @@ def data( request, vid ) :
     dump_data( vent, str(request.POST) )
     vent.last_contact = timezone.now()
     vent.save()
-    return HttpResponse( 'Registered' )    
+    return HttpResponse( 'Success' )    
 
 def all_status(request):
     vents = Ventilator.objects.all()
@@ -383,14 +389,14 @@ def all_status(request):
 # only authorized users can reach to the following views
 
 def plot_data( request, vid ):
-    # u = who_auth(request)
-    # if u == None:
-    #     return JsonResponse( {} )    
+    u = who_auth(request)
+    if u == None:
+        return JsonResponse( {} )    
     vent = get_or_none(Ventilator, pk=vid)
 
-    # # check if device if the device is active
-    # if ( not is_active( vent ) ) or timeout_deregister(vent):
-    #     return JsonResponse( {} )
+    # check if device if the device is active
+    if ( not is_active( vent ) ) or timeout_deregister(vent):
+        return JsonResponse( {} )
 
     # pressure_data = []
     # airflow_data = []
@@ -401,40 +407,39 @@ def plot_data( request, vid ):
     #     airflow_data.append( random.randint(0,600)/100 )
     #     tidal_vol_data.append( random.randint(0,300) )
 
-    pressure_data, airflow_data, tidal_vol_data, rr, ie_ratio = get_display_data(vent.id)
+    pressure_data, airflow_data, tidal_vol_data, rr, ie_ratio, peep = get_display_data(vent.id)
 
     # derived data
     # if rr == None: rr = "--"
     # if ie_ratio == None: ie_ratio = "-:-"    
-    peep = random.randint(0,500)/100
+    # peep = peep
 
     # data from objects
-    oxygen = vent.oxygen
-    set_rr = vent.set_rr
-    set_peep = vent.set_peep
-    set_oxygen = vent.set_oxygen
-    set_ie_ratio = vent.set_ie_ratio
-
-    rr_error = vent.rr_error 
-    peep_error = vent.peep_error
-    oxygen_error = vent.oxygen_error
-    ie_ratio_error = vent.ie_ratio_error
+    # oxygen = vent.oxygen
+    # set_rr = vent.set_rr
+    # set_peep = vent.set_peep
+    # set_oxygen = vent.set_oxygen
+    # set_ie_ratio = vent.set_ie_ratio
+    # rr_error = vent.rr_error 
+    # peep_error = vent.peep_error
+    # oxygen_error = vent.oxygen_error
+    # ie_ratio_error = vent.ie_ratio_error
     
     
     return JsonResponse( data={ 'rr' : rr,
                                 'peep' : peep,
-                                'oxygen' : oxygen,
+                                'oxygen' : vent.oxygen,
                                 'ieRatio' : ie_ratio,
 
-                                'setRR'  : set_rr,
-                                'setPEEP' : set_peep,
-                                'setOxygen' : set_oxygen,
-                                'setIERatio' : set_ie_ratio,
+                                'setRR'  : vent.set_rr,
+                                'setPEEP' : vent.set_peep,
+                                'setOxygen' : vent.set_oxygen,
+                                'setIERatio' : vent.set_ie_ratio,
 
-                                'rrError' : rr_error,
-                                'peepError' : peep_error,
-                                'oxygenError' : oxygen_error,
-                                'ieRatioError' : ie_ratio_error,
+                                'rrError' : vent.rr_error,
+                                'peepError' : vent.peep_error,
+                                'oxygenError' : vent.oxygen_error,
+                                'ieRatioError' : vent.ie_ratio_error,
 
                                 'pressureData': pressure_data,
                                 'airflowData': airflow_data,
