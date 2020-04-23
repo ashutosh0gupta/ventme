@@ -68,7 +68,9 @@ Note: every install must have a different secret key
    ```
    ./scripts/vent-dummy.py
    ```
-  - Refesh http://localhost:8000/8000 
+  - Refesh http://localhost:8000/all
+
+  - Click on the ventilator that now appears in the list
 
   # __Ventilator protocol__
 
