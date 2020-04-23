@@ -1,6 +1,3 @@
-# Random Attendance
-For taking random attendance in the class
-
 # Setting up
   1. __Copy this code to the following folder__
 
@@ -56,7 +53,7 @@ Note: every install must have a different secret key
    $python3 manage.py runserver
    ```
 
-  - For attendance, go to the following webpage in a browser
+  - For dashboard, go to the following webpage in a browser
 
      http://localhost:8000/
 
