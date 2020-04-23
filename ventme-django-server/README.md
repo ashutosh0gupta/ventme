@@ -74,11 +74,9 @@ Note: every install must have a different secret key
 
   - _View_
   
-     http://127.0.0.1:8000/all 
-      View all ventilators
-      
-     http://127.0.0.1:8000/vent/<id>
-      View plots of ventilator <id>
+     http://127.0.0.1:8000/all  View all ventilators
+
+     http://127.0.0.1:8000/vent/[id] View plots of ventilator [id]
 
   - _communcation with ventilators_
 
@@ -124,13 +122,15 @@ Note: every install must have a different secret key
   
        DEPLOY_PREFIX=<set-a-value>
 
-#
-
 
 # Quick tests to communicate with the server
+
+   ```
+
 curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
 
 curl -i -X POST --data "reg_key=<key>&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/<id>/
+   ```
 
 
 # Other notes for development
@@ -152,9 +152,15 @@ curl -i -X POST --data "reg_key=<key>&packet_count=1&sample_rate=100&num_samples
 
 ####### Django fixing if using 3.0
 
+Comment the following line
+
+   ```
 from django.utils.deprecation import RemovedInDjango30Warning
+   ```
 
-comment this line in below files
+in the following files
 
+   ```
 ~/.local/lib/python3.6/site-packages/django/contrib/admin/templatetags/admin_static.py
 ~/.local/lib/python3.6/sitepackages/django/contrib/staticfiles/templatetags/staticfiles.py
+   ```
