@@ -3,7 +3,7 @@
 import requests
 import time
 
-f = open('../../testing/raw_data.txt', "r")
+f = open('./raw_data.txt', "r")
 
 
 website="http://localhost:8000/"
@@ -60,9 +60,9 @@ for idx in range(1,150):
         'airflow':','.join([str(i) for i in airflow]),
         'tidal_volume':','.join([str(i) for i in tidal]),
         'rr_error':'False',
-        'peep_error':'False',
+        'peep_error':'True',
         'oxygen_error':'False',
-        'ie_ratio_error':'False'
+        'ie_ratio_error':'True'
     }
     reply = requests.post( data_url, data = d )
     print(reply.text)

@@ -15,6 +15,7 @@ For taking random attendance in the class
    $sudo apt-get install python3 python3-pip mysql-server
    $pip3 install Django
    $pip3 install django-mathfilters
+   $pip3 install -r /path/to/requirements.txt
    ```
 
   -- the above list may not be exhaustive (let us know the missing dependencies)
@@ -22,6 +23,7 @@ For taking random attendance in the class
  3.  Create file ./ventme_settings/.env containing the following key/values
  
 SECRET_KEY="<django-secret-key>"
+AUTH_LDAP_SERVER_URI="<ldap-server-for-account-management>"
 EMAIL_HOST="smtp.<your-smtp-server>"
 EMAIL_HOST_USER="<user-on-smtp-server>"
 EMAIL_HOST_PASSWORD="<password-of-the-user>"
@@ -31,47 +33,101 @@ EMAIL_HOST_PASSWORD="<password-of-the-user>"
    $tr -dc 'a-z0-9!@#$%^&*(-_=+)' < /dev/urandom | head -c50
 
 Note: every install must have a different secret key
-
+   * We are currently not sending any notification emails. Therefore, no need to
+     set up any meaning full values in the list
 
   4. __Initialize db__
 
   ```
   $cd ./ventme-django-server
-  $python3 manage.py makemigrations
+  $python3 manage.py makemigrations ventme
   $python3 manage.py migrate
-  ```
-  ```
   $python3 manage.py createsuperuser
   ```
 
   5. __Using the server__
 
-  - Start server of the application
+  - Start server 
 
    ```
-   $cd ~/ventme
+   $cd ~/ventme-django-server
    $python3 manage.py runserver
    ```
 
   - For attendance, go to the following webpage in a browser
 
-     http://127.0.0.1:8000/
+     http://localhost:8000/
+
+    It will ask you to login. login via the just created superuser.
+
+    Login should take you to http://localhost:8000/all
+
+  - Run the following dummy ventilator
+    ```
+   ./scripts/vent-dummy.py
+   ```
+  - Refesh http://localhost:8000/8000 
 
 Ventilator protocol
 
-     http://127.0.0.1:8000/data
+   View
+   ----
+     http://127.0.0.1:8000/all 
+      View all ventilators
+      
+     http://127.0.0.1:8000/vent/<id>
+      View plots of ventilator <id>
 
-     http://127.0.0.1:8000/never
+    Ventilator 
+    ----------
+     http://127.0.0.1:8000/register/
+       post { 'name': '<unqiue-name>','location' : '<location of ventilator>' }
+       reponses  "<id> <16char-key>"
+                 "Already"    -- in case the ventilator was already registered
+                 "BadFormat"  -- in case post is not in good format
 
-     http://127.0.0.1:8000/all
+     http://127.0.0.1:8000/data/<id>/
+       post {
+        'reg_key': <key>,
+        'packet_count':<packet-counter-incremented-round over:32768>,
+        'sample_rate':<sampling-rate : Int>,
+        'num_samples':< N = number-of-samples-in-this-message : Int >,
+        'set_oxygen':<set-oxygen-level : Int %>,
+        'set_peep':<set-peep-level : float H2Ocm>,
+        'set_rr':<set-rr-level : Int pm>,
+        'set_tidal_vol':<set-tidal-vol : Int ml>,
+        'set_ie_ratio':<set-I:E-ratio : String e.g. "1:2">,
+        'oxygen': <observed-level-of-oxygen : Int % >,
+        'pressure': <N pressure-samples: comma-separate-floats (H2Ocm)>,
+        'airflow':<N airflow-samples: comma-separate-floats (lpm)>,
+        'tidal_volume':<N tidal-samples: comma-separate-floats (ml)>,
+        'rr_error':  <Respiration error: [True,False]>,
+        'peep_error': <PEEP error: ['True',False]>,
+        'oxygen_error': <OXYGEN error: ['True','False']>,
+        'ie_ratio_error':<IE ratio error: ['True','False']>
+         }
 
-     http://127.0.0.1:8000/import
 
-  - Policy of choosing a random student
 
+# deploy modifications
+
+  -- In ventme_settings/settings.py set DEPLOY to True   
+      DEPLOY = True
+  -- In ventme_settings/deploy_settings.py
+  
+       DEPLOY_PREFIX=<set-a-value>
+
+#
+
+# Quick tests to communicate with the server
+curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
+
+curl -i -X POST --data "reg_key=nrptfrnmwsbahnwp&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/5/
 
 
 # Other notes for development
+------------------------------
+
 
 (should not be relevant to a user)
 
@@ -86,21 +142,7 @@ Ventilator protocol
    $python manage.py startapp
 
 
-
-# deploy modifications
-
-  -- ventme_settings
-  
-      replace "deploy-prefix" to the choosen deploy-prefix
-
-# test
-curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
-
-curl -i -X POST --data "reg_key=nrptfrnmwsbahnwp&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/5/
-
-
-
-# Django fixing
+####### Django fixing if using 3.0
 
 from django.utils.deprecation import RemovedInDjango30Warning
 

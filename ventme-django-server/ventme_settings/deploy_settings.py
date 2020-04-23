@@ -13,13 +13,14 @@ SESSION_COOKIE_SECURE = True
 #SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 # SECURE_HSTS_PRELOAD = True
 
+DEPLOY_PREFIX = '/~internal/cs228/'
 
-STATIC_URL = '/~internal/cs228/static/'
+STATIC_URL = DEPLOY_PREFIX+'static/'
 STATIC_ROOT = os.path.join(BASE_DIR,'static')
 #STATICFILES_DIRS = [(os.path.join(BASE_DIR, 'static')),]
 
 
-MEDIA_URL = '/~internal/cs228/images/'
+MEDIA_URL = DEPLOY_PREFIX+'images/'
 MEDIA_ROOT = 'ventme/images'
 
 

@@ -29,4 +29,4 @@ urlpatterns = [
 # adding the prefix to all the urls
 
 if settings.DEPLOY:
-    urlpatterns = [path('deply-prefix/',include(urlpatterns))]
+    urlpatterns = [path(settings.DEPLOY_PREFIX,include(urlpatterns))]
