@@ -24,6 +24,7 @@ from datetime import datetime,timedelta,date
 import random
 import pylatexenc
 from pylatexenc.latex2text import LatexNodes2Text
+from  .data_handler import *
 
 log_vent = logging.getLogger('ventme')
 
@@ -66,149 +67,23 @@ def who_auth(request):
 # -- I hope no concurrency issues
 # -- turn the following into classes
 
-num_display_samples = 2000
-num_maxmin_samples = 8
-counters = dict()
-pressureData = dict()
-pressureLowPassData = dict()
-diffPressureData = dict()
-airflowData = dict()
-volumeData = dict()
-maxminCounter = dict()
-maxminData = dict()
+display_data = dict()
 
-# derived data
-rrs = dict()
-peeps = dict()
-ieratios = dict()
+def reset_data( vid ):
+    global display_data
+    if vid in display_data:
+        display_data[vid].reset()
+    else:
+        display_data[vid] = Ventilator_data()
 
 def get_display_data(vid):
-    pData   = pressureData[vid]
-    aData   = airflowData[vid]
-    #tData   = volumeData[vid]
-    #tData = pressureLowPassData[vid]
-    tData = diffPressureData[vid]
-    rr = rrs[vid]
-    ieratio = ieratios[vid]
-    peep = peeps[vid]
-    return pData,aData,tData,rr,ieratio,peep
+    global display_data
+    return display_data[vid].get_display()
 
-def compute_rr_ie( mmData, sample_rate ):
-    # minima points are stored as negative numbers
-    # and maxima points are stored as positive numbers
-    lambdas = []
-    ratios = []
-    last_inhale = None
-    last_exhale = None
-    isMin = True
-    if( mmData[0] < 0 ):
-       isMin = False
-    for i in range(1,num_maxmin_samples):
-        assert( isMin == (mmData[i] < 0) )
-        diff = mmData[i]+mmData[i-1]        
-        if isMin:
-            diff = -diff
-        diff = diff % num_display_samples
-        if isMin:
-            last_exhale = diff
-        else:
-            last_inhale = diff
-        if last_inhale != None and last_exhale != None and isMin:
-            lambdas.append(last_inhale+last_exhale)
-            ratios.append( last_inhale/last_exhale )
-        isMin = not isMin
-    avg_lambdas = sum(lambdas) / len(lambdas)
-    avg_ratios = sum(ratios) / len(ratios)
-    flipped = False
-    if avg_ratios < 1:
-        avg_ratios = 1/avg_ratios
-        flipped = True
-    ratio_str = None
-    for i in range(1,4):
-        if  i*0.8 < avg_ratios and avg_ratios < i*1.2:
-            ratio_str = str(i)
-    if ratio_str:
-        if flipped :
-            ratio_str = ratio_str + ':1'
-        else:
-            ratio_str = '1:' + ratio_str
-    else:
-        ratio_str = "-:-"
-    return int(60*sample_rate/avg_lambdas),ratio_str
-
-        
 def put_packet( vid, pressure, airflow, volume, sample_rate ):
-    lp = 0.98
-    global counters, pressureData, airflowData, volumeData
-    global pressureLowPassData
-
-    counter = counters[vid]
-    pData   = pressureData[vid]
-    lpData  = pressureLowPassData[vid]
-    dData  =  diffPressureData[vid]
-    aData   = airflowData[vid]
-    tData   = volumeData[vid]
-    mmData  = maxminData[vid]
-    mmCnt = maxminCounter[vid]
-    rr = None
-    ie = None
-    peep = None
-    
-    pctr = (counter-1)% num_display_samples
-    for idx in range( 0,len(pressure) ):
-        pData[counter] = pressure[idx]
-        aData[counter] = airflow[idx]
-        tData[counter] = volume[idx]
-
-        # lowpass, differentiate, and zero-crossing
-        lpData[counter]=lp*lpData[pctr]+(1-lp)*pressure[idx]
-        #lpData[counter]=lp*lpData[pctr]+(1-lp)*airflow[idx]
-        dData[counter]=lpData[counter]-lpData[pctr]
-        if( dData[counter] >= 0 and dData[pctr] < 0 ):
-            # found a maxmia
-            mmData[mmCnt] = counter + 1
-            if mmCnt == num_maxmin_samples -1:
-                rr,ie = compute_rr_ie( mmData, sample_rate )
-            mmCnt = (mmCnt + 1) % num_maxmin_samples
-        if( dData[counter] < 0 and dData[pctr] >= 0 ):
-            # found a minima
-            mmData[mmCnt] = -(counter + 1)
-            if mmCnt == num_maxmin_samples -1:
-                rr, ie = compute_rr_ie( mmData, sample_rate )
-            mmCnt = (mmCnt + 1) % num_maxmin_samples
-            
-        pctr = counter
-        counter = (counter + 1) % num_display_samples
-
-    if counter >= num_display_samples - len(pressure) :
-        peep = min(pData)
+    global display_data
+    return display_data[vid].put_packet(pressure, airflow, volume, sample_rate)
         
-    pData[counter] = None
-    aData[counter] = None
-    tData[counter] = None
-    lpData[counter] = None
-    dData[counter] = None
-    counters[vid] = counter
-    maxminCounter[vid] = mmCnt
-    if rr: rrs[vid] = rr
-    if ie: ieratios[vid] = ie
-    if peep: peeps[vid] = peep
-    
-def initialize_data( vid ):
-    global counters, pressureData, airflowData, volumeData
-    global pressureLowPassData
-    counters[vid] = 0
-    pressureData[vid] = [0]*num_display_samples
-    pressureLowPassData[vid] = [0]*num_display_samples
-    diffPressureData[vid] = [0]*num_display_samples
-    airflowData[vid]  = [0]*num_display_samples
-    volumeData[vid]   = [0]*num_display_samples
-    rrs[vid] = None
-    peeps[vid] = None
-    ieratios[vid] = None
-    maxminCounter[vid] = 0
-    maxminData[vid] = [0]*num_maxmin_samples
-    
 #----------------------------------------------------------------------------
 # VIEWS
 
@@ -228,7 +103,7 @@ def is_active( vent ):
     return True
 
 def is_error(vent):
-    if vent.rr_error or vent.peep_error or vent.oxygen_error or vent.ie_ratio_error:
+    if vent.rr_error or vent.peep_error or vent.pmax_error or vent.oxygen_error or vent.ie_ratio_error:
         return True
     return False
 
@@ -243,9 +118,10 @@ def reset_vent( vent ):
     vent.oxygen = 0
     vent.rr_error = False
     vent.peep_error = False
+    vent.pmax_error = False
     vent.oxygen_error = False
     vent.ie_ratio_error = False
-    initialize_data(vent.id)
+    reset_data(vent.id)
     
 def timeout_deregister( vent ):
     past = timezone.now()-timedelta( seconds = 10 )
@@ -284,13 +160,18 @@ def register(request):
     if request.POST == None:
         return HttpResponse( 'BadFormat' )
     # print(request.POST)
+
+    # check if all the fields are there
     try:
-        n = request.POST['name']
-        loc = request.POST['location']
-        vent, created = Ventilator.objects.get_or_create( name= n )
+        n       = request.POST['name']
+        loc     = request.POST['location']
+        patient = request.POST['patient']
+        version = request.POST['protocol_version']
     except Exception as e:
         log_vent.error( 'Bad post received : '+ str(received.POST) )
         return HttpResponse( 'BadFormat' )
+
+    vent, created = Ventilator.objects.get_or_create( name= n )
 
     now = timezone.now()
     if not created:
@@ -345,6 +226,7 @@ def data( request, vid ) :
 
         vent.rr_error       = (request.POST[ 'rr_error'      ] == 'True')
         vent.peep_error     = (request.POST[ 'peep_error'    ] == 'True')
+        vent.pmax_error     = (request.POST[ 'peep_error'    ] == 'True')
         vent.oxygen_error   = (request.POST[ 'oxygen_error'  ] == 'True')
         vent.ie_ratio_error = (request.POST[ 'ie_ratio_error'] == 'True')
 
@@ -392,42 +274,18 @@ def plot_data( request, vid ):
     u = who_auth(request)
     if u == None:
         return JsonResponse( {} )    
+
     vent = get_or_none(Ventilator, pk=vid)
 
     # check if device if the device is active
     if ( not is_active( vent ) ) or timeout_deregister(vent):
         return JsonResponse( {} )
 
-    # pressure_data = []
-    # airflow_data = []
-    # tidal_vol_data = []
-
-    # for i in range(0,num_display_samples):
-    #     pressure_data.append( random.randint(0,600)/100 )
-    #     airflow_data.append( random.randint(0,600)/100 )
-    #     tidal_vol_data.append( random.randint(0,300) )
-
-    pressure_data, airflow_data, tidal_vol_data, rr, ie_ratio, peep = get_display_data(vent.id)
-
-    # derived data
-    # if rr == None: rr = "--"
-    # if ie_ratio == None: ie_ratio = "-:-"    
-    # peep = peep
-
-    # data from objects
-    # oxygen = vent.oxygen
-    # set_rr = vent.set_rr
-    # set_peep = vent.set_peep
-    # set_oxygen = vent.set_oxygen
-    # set_ie_ratio = vent.set_ie_ratio
-    # rr_error = vent.rr_error 
-    # peep_error = vent.peep_error
-    # oxygen_error = vent.oxygen_error
-    # ie_ratio_error = vent.ie_ratio_error
-    
+    pressure, airflow, tidal, rr, ie_ratio,peep,pmax =get_display_data(vent.id)
     
     return JsonResponse( data={ 'rr' : rr,
                                 'peep' : peep,
+                                'pmax' : pmax,
                                 'oxygen' : vent.oxygen,
                                 'ieRatio' : ie_ratio,
 
@@ -438,12 +296,13 @@ def plot_data( request, vid ):
 
                                 'rrError' : vent.rr_error,
                                 'peepError' : vent.peep_error,
+                                'pmaxError' : vent.pmax_error,
                                 'oxygenError' : vent.oxygen_error,
                                 'ieRatioError' : vent.ie_ratio_error,
 
-                                'pressureData': pressure_data,
-                                'airflowData': airflow_data,
-                                'tidalVolData': tidal_vol_data, } )
+                                'pressureData': pressure,
+                                'airflowData': airflow,
+                                'tidalVolData': tidal, } )
 
 def vent( request, vid ) :
     u = who_auth(request)

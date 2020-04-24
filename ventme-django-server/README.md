@@ -82,9 +82,9 @@ Note: every install must have a different secret key
    ```
      http://127.0.0.1:8000/register/
        post { 'name': '<unqiue-name : string <100 chars>',
-              'location' : '<location of ventilator : string < 100 chars >'
-              'patient' : '<patient on the ventilator : string < 100 chars >'
-              'protocol-version' : '1.0'
+              'location' : '<location of ventilator : string < 100 chars >',
+              'patient' : '<patient on the ventilator : string < 100 chars >',
+              'protocol_version' : '1.0'
             }
        reponses  "<id> <key : 16 char string>"
                  "Already"    -- in case the ventilator was already registered
@@ -107,6 +107,7 @@ Note: every install must have a different secret key
         'tidal_volume':<N tidal-samples: comma-separate-floats (ml)>,
         'rr_error':  <Respiration error: [True,False]>,
         'peep_error': <PEEP error: ['True',False]>,
+        'pmax_error': <Pmax error: ['True',False]>,
         'oxygen_error': <OXYGEN error: ['True','False']>,
         'ie_ratio_error':<IE ratio error: ['True','False']>
          }

@@ -9,7 +9,10 @@ f = open('./scripts/raw_data.txt', "r")
 website="http://localhost:8000/"
 
 reg_url = website+'register/'
-reg_data = {'name': 'Ventilator2', 'location' : 'Room201'}
+reg_data = { 'name': 'Ventilator2',
+             'location' : 'Room201',
+             'patient' : 'Ibn Al Massod',
+              'protocol_version' : '1.0' }
 
 reg_reply = requests.post(reg_url, data = reg_data )
 
@@ -19,7 +22,8 @@ if reg_reply.text == 'BadFormat' :
 if reg_reply.text == 'Already':
     print( 'Wait for 10 secs for auto deregistration' )
     exit()
-
+    
+print(reg_reply.text)
 replies= reg_reply.text.split(' ')
 dev_id = int(replies[0])
 key = replies[1]
@@ -61,6 +65,7 @@ for idx in range(1,150):
         'tidal_volume':','.join([str(i) for i in tidal]),
         'rr_error':'False',
         'peep_error':'True',
+        'pmax_error':'True',        
         'oxygen_error':'False',
         'ie_ratio_error':'True'
     }

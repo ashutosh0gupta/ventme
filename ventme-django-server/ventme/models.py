@@ -23,7 +23,8 @@ class Ventilator(models.Model):
     # readings
     oxygen     = models.IntegerField(verbose_name="Oxygen level(%)",    default=0 )
     rr_error       = models.BooleanField(verbose_name="Respiration out of bounds", default=False)
-    peep_error     = models.BooleanField(verbose_name="PEEP out of bounds" , default=False)    
+    peep_error     = models.BooleanField(verbose_name="PEEP out of bounds" , default=False)
+    pmax_error     = models.BooleanField(verbose_name="PEEP out of bounds" , default=False)    
     oxygen_error   = models.BooleanField(verbose_name="Oxygen out of bounds" , default=False)    
     ie_ratio_error = models.BooleanField(verbose_name="IE ratio out of bounds", default=False)    
     data       = models.FileField(verbose_name="data dump file", null = True )

@@ -14,6 +14,7 @@
 <div id="container" style="width: 90%;">
     <span id="rr" style="font-size:30px;">--</span>RR(pm)
     <span id="peep" style="font-size:30px;">--</span>peep(H2Ocm)
+    <span id="pmax" style="font-size:30px;">--</span>Pmax(H2Ocm)
     <span id="oxygen" style="font-size:30px;">--</span>Oxygen(%)
     <span id="ieratio" style="font-size:30px;">--</span>I:E
     
@@ -22,7 +23,7 @@
     <canvas id="tidalvol-plot"></canvas>
     Set values:
     <span id="setrr" style="font-size:30px;">--</span>RR(pm)
-    <span id="setpeep" style="font-size:30px;">--</span>peep(H2Ocm)
+    <span id="setpeep" style="font-size:30px;">--</span>PEEP(H2Ocm)
     <span id="setoxygen" style="font-size:30px;">--</span>Oxygen(%)
     <span id="setieratio" style="font-size:30px;">--</span>I:E
 </div>
@@ -136,6 +137,11 @@
          }else{
             var peep = "--";
          }
+         if( data.pmax ) {
+            var pmax = data.pmax;
+         }else{
+            var pmax = "--";
+         }
          if( data.oxygen ) {
             var oxygen = data.oxygen;
          }else{
@@ -149,6 +155,7 @@
                         
          document.getElementById("rr").innerHTML = rr         
          document.getElementById("peep").innerHTML = peep
+         document.getElementById("pmax").innerHTML = pmax
          document.getElementById("oxygen").innerHTML = oxygen
          document.getElementById("ieratio").innerHTML = ieRatio
 
@@ -188,6 +195,11 @@
              document.getElementById("peep").style.color = "red";
          }else{
              document.getElementById("peep").style.color = "black";
+         }
+         if( data.pmaxError ){
+             document.getElementById("pmax").style.color = "red";
+         }else{
+             document.getElementById("pmax").style.color = "black";
          }
          if( data.oxygenError ){
              document.getElementById("oxygen").style.color = "red";
