@@ -6,3 +6,5 @@ account/migrations
 account/__pycache__/
 ventme_settings/__pycache__/
 ventme_settings/.env
+debug.error.log
+debug.log

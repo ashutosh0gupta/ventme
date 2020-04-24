@@ -73,7 +73,6 @@ class Ventilator_data:
         avg_ratios = sum(ratios) / len(ratios)
         flipped = False
         if avg_ratios < 1: avg_ratios = 1/avg_ratios
-        print(avg_ratios)        
         flipped = True
         ratio_str = None
         for i in range(1,4):
