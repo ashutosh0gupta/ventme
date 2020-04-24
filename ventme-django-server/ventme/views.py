@@ -271,18 +271,31 @@ def all_status(request):
 
 # only authorized users can reach to the following views
 
+def out_of_range( val, set_val ):
+    if val:
+        return (abs(val-set_val)/set_val) > 0.1
+    else:
+        return False
+
 def plot_data( request, vid ):
-    u = who_auth(request)
-    if u == None:
-        return JsonResponse( {} )    
+    # u = who_auth(request)
+    # if u == None:
+    #     return JsonResponse( {} )    
 
     vent = get_or_none(Ventilator, pk=vid)
 
     # check if device if the device is active
-    if ( not is_active( vent ) ) or timeout_deregister(vent):
-        return JsonResponse( {} )
+    # if ( not is_active( vent ) ) or timeout_deregister(vent):
+    #     return JsonResponse( {} )
 
     pressure, airflow, tidal, rr, ie_ratio,peep,pmax =get_display_data(vent.id)
+
+    # check if the values are in range, if not raise alarm
+    rr_error = vent.rr_error or out_of_range( rr, vent.set_rr )
+    peep_error = vent.peep_error or out_of_range( peep, vent.set_peep )
+    pmax_error = vent.pmax_error or (pmax > 60) # <---- TODO: check this val?
+    o2_error = vent.oxygen_error or out_of_range(vent.oxygen,vent.set_oxygen )
+    ie_error = vent.ie_ratio_error or ( ie_ratio != vent.set_ie_ratio )
     
     return JsonResponse( data={ 'rr' : rr,
                                 'peep' : peep,
@@ -295,11 +308,11 @@ def plot_data( request, vid ):
                                 'setOxygen' : vent.set_oxygen,
                                 'setIERatio' : vent.set_ie_ratio,
 
-                                'rrError' : vent.rr_error,
-                                'peepError' : vent.peep_error,
-                                'pmaxError' : vent.pmax_error,
-                                'oxygenError' : vent.oxygen_error,
-                                'ieRatioError' : vent.ie_ratio_error,
+                                'rrError' : rr_error,
+                                'peepError' : peep_error,
+                                'pmaxError' : pmax_error,
+                                'oxygenError' : o2_error,
+                                'ieRatioError' : ie_error,
 
                                 'pressureData': pressure,
                                 'airflowData': airflow,

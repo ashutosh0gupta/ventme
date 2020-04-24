@@ -56,7 +56,7 @@ for idx in range(1,150):
         'num_samples':20,
         'set_oxygen':10,
         'set_peep':5,
-        'set_rr':12,
+        'set_rr':21,
         'set_tidal_vol':300,
         'set_ie_ratio':"1:2",
         'oxygen':40,

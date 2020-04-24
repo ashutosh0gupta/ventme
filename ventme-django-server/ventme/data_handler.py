@@ -1,5 +1,6 @@
 # -- TODOs
 #  * Investigate how the min/max will behave if there is a long flat max/min
+#  * Improve I/E detection
 
 num_display_samples = 2000
 num_maxmin_samples = 8
@@ -38,9 +39,9 @@ class Ventilator_data:
     def get_display( self ):
         pData   = self.pressure
         aData   = self.airflow
-        tData   = self.volume
-        # tData = self.low_pass[vid]
-        # tData = self.diff[vid]
+        # tData   = self.volume
+        # tData = self.low_pass
+        tData = self.diff
         return pData, aData, tData, self.rr,self.ie_ratio,self.peep,self.pmax
 
     def compute_rr_ie( self, sample_rate ):
@@ -88,7 +89,9 @@ class Ventilator_data:
         self.ie_ratio = ratio_str
         
     def put_packet( self, pressure, airflow, volume, sample_rate ):
-        lp = 0.98
+
+        # Coeffcient for the lowpass filter
+        lp = 0.9
     
         pctr = (self.ctr-1)% num_display_samples
         for idx in range( 0,len(pressure) ):
@@ -96,7 +99,9 @@ class Ventilator_data:
             self.airflow[self.ctr] = airflow[idx]
             self.volume[self.ctr] = volume[idx]
 
+            #
             # Max/Min detection: low_pass -> differentiate -> zero-crossing
+            #
             self.low_pass[self.ctr]=lp*self.low_pass[pctr]+(1-lp)*pressure[idx]
             #self.low_pass[self.ctr]=lp*self.low_pass[pctr]+(1-lp)*airflow[idx]
             self.diff[self.ctr]=self.low_pass[self.ctr]-self.low_pass[pctr]
@@ -119,10 +124,11 @@ class Ventilator_data:
                 self.maxmin[self.mm_ctr] = (self.ctr + 1)
                 self.compute_rr_ie( sample_rate )
                 self.mm_ctr = (self.mm_ctr + 1) % num_maxmin_samples
-            
+
             pctr = self.ctr
             self.ctr = (self.ctr + 1) % num_display_samples
 
+        # periodically update PEEP and PMAX
         if self.ctr >= num_display_samples - len(pressure) :
             self.peep = int(min(self.pressure[:self.ctr]))
             self.pmax = int(max(self.pressure[:self.ctr]))
