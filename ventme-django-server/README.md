@@ -32,8 +32,8 @@ EMAIL_HOST_PASSWORD="<password-of-the-user>"
    $tr -dc 'a-z0-9!@#$%^&*(-_=+)' < /dev/urandom | head -c50
 
 Note: every install must have a different secret key
-   * We are currently not sending any notification emails. Therefore, no need to
-     set up any meaning full values in the list
+   * We are currently not sending any notification emails. Therefore, no
+     need to set up any meaningful values for emails.
 
   4. __Initialize db__
 
@@ -73,16 +73,20 @@ Note: every install must have a different secret key
 
   - _View_
   
-     http://127.0.0.1:8000/all  View all ventilators
+     http://localhost:8000/all  View all ventilators
 
-     http://127.0.0.1:8000/vent/[id] View plots of ventilator [id]
+     http://localhost:8000/vent/[id] View plots of ventilator [id]
 
   - _communcation with ventilators_
 
    ```
      http://127.0.0.1:8000/register/
-       post { 'name': '<unqiue-name>','location' : '<location of ventilator>' }
-       reponses  "<id> <16char-key>"
+       post { 'name': '<unqiue-name : string <100 chars>',
+              'location' : '<location of ventilator : string < 100 chars >'
+              'patient' : '<patient on the ventilator : string < 100 chars >'
+              'protocol-version' : '1.0'
+            }
+       reponses  "<id> <key : 16 char string>"
                  "Already"    -- in case the ventilator was already registered
                  "BadFormat"  -- in case post is not in good format
 
@@ -93,9 +97,9 @@ Note: every install must have a different secret key
         'sample_rate':<sampling-rate : Int>,
         'num_samples':< N = number-of-samples-in-this-message : Int >,
         'set_oxygen':<set-oxygen-level : Int %>,
-        'set_peep':<set-peep-level : float H2Ocm>,
-        'set_rr':<set-rr-level : Int pm>,
-        'set_tidal_vol':<set-tidal-vol : Int ml>,
+        'set_peep':<set-peep-level : float (H2Ocm)>,
+        'set_rr':<set-rr-level : Int (pm)>,
+        'set_tidal_vol':<set-tidal-vol : Int (ml)>,
         'set_ie_ratio':<set-I:E-ratio : String e.g. "1:2">,
         'oxygen': <observed-level-of-oxygen : Int % >,
         'pressure': <N pressure-samples: comma-separate-floats (H2Ocm)>,
@@ -115,17 +119,19 @@ Note: every install must have a different secret key
 
 # deploy modifications
 
-  -- In ventme_settings/settings.py set DEPLOY to True   
-      DEPLOY = True
-  -- In ventme_settings/deploy_settings.py
-  
-       DEPLOY_PREFIX=<set-a-value>
+  - In ventme_settings/settings.py set DEPLOY to True   
+   ```
+   DEPLOY = True
+   ```
+  - In ventme_settings/deploy_settings.py
 
+   ```
+       DEPLOY_PREFIX=<set-a-value>
+   ```
 
 # Quick tests to communicate with the server
 
    ```
-
 curl -i -X POST --data "name=Ventilator1&location=Room101"  http://localhost:8000/register/
 
 curl -i -X POST --data "reg_key=<key>&packet_count=1&sample_rate=100&num_samples=3&set_oxygen=10&set_peep=5&set_rr=12&set_tidal_vol=300&set_ie_ratio=1:2&oxygen=40&pressure=20,20,20&airflow=10,10,10.1&tidal_volume=20,30,50&rr_error=False&peep_error=False&oxygen_error=False&ie_ratio_error=False"  http://localhost:8000/data/<id>/
@@ -133,8 +139,6 @@ curl -i -X POST --data "reg_key=<key>&packet_count=1&sample_rate=100&num_samples
 
 
 # Other notes for development
-------------------------------
-
 
 (should not be relevant to a user)
 
