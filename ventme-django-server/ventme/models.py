@@ -8,6 +8,7 @@ class Ventilator(models.Model):
     name=models.CharField(max_length=100)
     location=models.CharField(max_length=100, null = True)
     registration_key = models.CharField(max_length=16, null = True)
+    patient = models.CharField(max_length=100, null = True)
     last_contact = models.DateTimeField(verbose_name="Last contact", null=True)
     is_registered = models.BooleanField(verbose_name="Is registered?", default=False)
     packet_count =  models.IntegerField(verbose_name="Packet count",    default=0    )

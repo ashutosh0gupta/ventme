@@ -10,12 +10,16 @@
 {% block content %}
 
 <h2>{{vent.name}} at {{vent.location}} <a href="{% url 'index' %}">[Dashboard]</a></h2>
-
+{% if vent.patient %}
+<div>
+  Patient : {{vent.patient}}
+</div>
+{% endif %}
 <div id="container" style="width: 90%;">
     <span id="rr" style="font-size:30px;">--</span>RR(pm)
-    <span id="peep" style="font-size:30px;">--</span>peep(H2Ocm)
+    <span id="peep" style="font-size:30px;">--</span>PEEP(H2Ocm)
     <span id="pmax" style="font-size:30px;">--</span>Pmax(H2Ocm)
-    <span id="oxygen" style="font-size:30px;">--</span>Oxygen(%)
+    <span id="oxygen" style="font-size:30px;">--</span>O2(%)
     <span id="ieratio" style="font-size:30px;">--</span>I:E
     
     <canvas id="pressure-plot" data-url="{% url 'plot' vent.id %}"></canvas>
@@ -24,7 +28,7 @@
     Set values:
     <span id="setrr" style="font-size:30px;">--</span>RR(pm)
     <span id="setpeep" style="font-size:30px;">--</span>PEEP(H2Ocm)
-    <span id="setoxygen" style="font-size:30px;">--</span>Oxygen(%)
+    <span id="setoxygen" style="font-size:30px;">--</span>O2(%)
     <span id="setieratio" style="font-size:30px;">--</span>I:E
 </div>
 

@@ -189,6 +189,7 @@ def register(request):
 
     # reset/initialize the registration
     vent.registration_key = random_string()
+    vent.patient = patient
     vent.is_registered = True
     vent.last_contact = now
     reset_vent(vent)

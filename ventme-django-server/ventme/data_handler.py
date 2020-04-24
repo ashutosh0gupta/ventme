@@ -79,13 +79,11 @@ class Ventilator_data:
             if  i*0.8 < avg_ratios and avg_ratios < i*1.2:
                 ratio_str = str(i)
                 break
-        if ratio_str:
-            if flipped :
-                ratio_str = ratio_str + ':1'
-            else:
-                ratio_str = '1:' + ratio_str
+        if ratio_str == None: ratio_str = "{:.1f}".format(avg_ratios)
+        if flipped :
+            ratio_str = ratio_str + ':1'
         else:
-            ratio_str = "-:-"
+            ratio_str = '1:' + ratio_str
         self.rr = int(60*sample_rate/avg_lambdas)
         self.ie_ratio = ratio_str
         
@@ -126,8 +124,8 @@ class Ventilator_data:
             self.ctr = (self.ctr + 1) % num_display_samples
 
         if self.ctr >= num_display_samples - len(pressure) :
-            self.peep = min(self.pressure[:self.ctr])
-            self.pmax = max(self.pressure[:self.ctr])
+            self.peep = int(min(self.pressure[:self.ctr]))
+            self.pmax = int(max(self.pressure[:self.ctr]))
 
         # create a gap in the view; place a marker
         self.pressure[self.ctr] = None
