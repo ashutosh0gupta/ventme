@@ -72,15 +72,13 @@ class Ventilator_data:
             isMin = not isMin
         avg_lambdas = sum(lambdas) / len(lambdas)
         avg_ratios = sum(ratios) / len(ratios)
-        flipped = False
+        flipped = (avg_ratios < 1)
         if avg_ratios < 1: avg_ratios = 1/avg_ratios
-        flipped = True
-        ratio_str = None
+        ratio_str = "{:.1f}".format(avg_ratios)
         for i in range(1,4):
             if  i*0.8 < avg_ratios and avg_ratios < i*1.2:
                 ratio_str = str(i)
                 break
-        if ratio_str == None: ratio_str = "{:.1f}".format(avg_ratios)
         if flipped :
             ratio_str = ratio_str + ':1'
         else:
