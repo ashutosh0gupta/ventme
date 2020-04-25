@@ -39,9 +39,9 @@ class Ventilator_data:
     def get_display( self ):
         pData   = self.pressure
         aData   = self.airflow
-        # tData   = self.volume
+        tData   = self.volume
         # tData = self.low_pass
-        tData = self.diff
+        # tData = self.diff
         return pData, aData, tData, self.rr,self.ie_ratio,self.peep,self.pmax
 
     def compute_rr_ie( self, sample_rate ):

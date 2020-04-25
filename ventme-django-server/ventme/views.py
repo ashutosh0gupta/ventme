@@ -278,15 +278,15 @@ def out_of_range( val, set_val ):
         return False
 
 def plot_data( request, vid ):
-    # u = who_auth(request)
-    # if u == None:
-    #     return JsonResponse( {} )    
+    u = who_auth(request)
+    if u == None:
+        return JsonResponse( {} )    
 
     vent = get_or_none(Ventilator, pk=vid)
 
     # check if device if the device is active
-    # if ( not is_active( vent ) ) or timeout_deregister(vent):
-    #     return JsonResponse( {} )
+    if ( not is_active( vent ) ) or timeout_deregister(vent):
+        return JsonResponse( {} )
 
     pressure, airflow, tidal, rr, ie_ratio,peep,pmax =get_display_data(vent.id)
 
