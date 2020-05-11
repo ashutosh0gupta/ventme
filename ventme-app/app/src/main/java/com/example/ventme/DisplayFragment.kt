@@ -2,6 +2,7 @@ package com.example.ventme
 
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -76,10 +77,17 @@ class DisplayFragment : Fragment() {
                     o2num.text = getString(R.string.unknown)
                     brnum.text = getString(R.string.unknown)
                     peepnum.text = getString(R.string.unknown)
+                    ienum.text = getString(R.string.unknown)
+                    seto2num.text = getString(R.string.unknown)
+                    setbrnum.text = getString(R.string.unknown)
+                    setpeepnum.text = getString(R.string.unknown)
+                    setienum.text = getString(R.string.unknown)
+                    settidalvolumnum.text = getString(R.string.unknown)
                 }
             }
             resetPlots()
         }
+        //Log.d( TAG,"$seriesPressure")
         pressure.redraw()
         airflow.redraw()
         tidalVolume.redraw()
@@ -159,6 +167,9 @@ class DisplayFragment : Fragment() {
         if( pack == null ) {
             resetPlots()
         }
+        //Log.w(TAG, "Received pressure samples ${pack!!.pressureSamples}" )
+        //Log.w(TAG, "Received airflow samples ${pack!!.airflowSamples}" )
+
         val newIndex = writeToPlotSeries(seriesPressure, currentIndex, pack!!.pressureSamples )
         writeToPlotSeries(seriesAirflow, currentIndex, pack.airflowSamples )
         writeToPlotSeries(seriesTidalVolume, currentIndex, pack.tidalVolumeSamples )

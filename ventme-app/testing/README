@@ -1,0 +1,11 @@
+Compile and run
+---------------
+
+$gcc packet.c serial-dummy.c
+$a.out
+
+
+# In linux, you may be asked to have permission to access the serial port
+# Use the following command
+
+sudo usermod -a -G dialout $USER

@@ -9,8 +9,10 @@
   
    ```
    $sudo apt update
-   $sudo apt-get install python3 python3-pip mysql-server
+   $sudo apt-get install python3-dev python3 python3-pip mysql-server
+   $sudo apt-get install build-essential nginx 
    $pip3 install Django
+   $pip3 wusgi Django
    $pip3 install django-mathfilters
    $pip3 install -r /path/to/requirements.txt
    ```

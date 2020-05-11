@@ -3,7 +3,7 @@
 import requests
 import time
 
-f = open('./scripts/raw_data.txt', "r")
+f = open('./scripts/raw_data.log', "r")
 
 
 website="http://localhost:8000/"
@@ -36,17 +36,20 @@ pressure = [ 0 for x in range(0,sample_size)]
 airflow = [ 0 for x in range(0,sample_size)]
 tidal = [ 0 for x in range(0,sample_size)]
 
-for idx in range(1,150):
+idx = 0
+while(1):
 
     for j in range(0,sample_size):
         line = f.readline()
+        line = line.strip('$#\n')
+        # print(line)
         if line:
-            splt = line.split()
+            splt = line.split(",")
         else:
             exit()
-        pressure[j] = float(splt[0])
+        pressure[j] = float(splt[2])
         airflow[j] = float(splt[1])
-        tidal[j] = j*j
+        tidal[j] = float(splt[0])
     
     
     d = {
@@ -74,5 +77,5 @@ for idx in range(1,150):
     if not reply.text in ['Success','Dropped']:
         break
     time.sleep(0.2)
-
+    idx = idx + 1
 f.close()
